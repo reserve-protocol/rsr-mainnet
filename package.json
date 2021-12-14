@@ -1,10 +1,14 @@
 {
   "name": "rsr-mainnet",
   "version": "1.0.0",
-  "main": "index.js",
   "repository": "https://github.com/reserve-protocol/rsr-mainnet.git",
   "author": "Reserve Team",
   "license": "MIT",
+  "scripts": {
+    "compile": "TS_NODE_TRANSPILE_ONLY=1 npx hardhat compile",
+    "devchain": "npx hardhat node",
+    "test": "npx hardhat test"
+  },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.3",
     "@nomiclabs/hardhat-etherscan": "^2.1.8",
