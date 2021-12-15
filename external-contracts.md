@@ -14,6 +14,7 @@ Each of the following headings, then, is a unique contract _name_ holding some R
 
 - Contracts we control
     - Sweeping old RSR contracts
+    - TokenVesting
 - On-chain wallets (no special needs)
 - Generic token bridges
     - The contracts themselves are so far fully generic to the ERC20 tokens they control, but that doesn't mean that whatever's on the other side of the bridge will keep working when we update...
@@ -198,66 +199,127 @@ Balancer pools contain a direct reference to token addresses as state. It looks 
 - 0xffdc748ffb88dfa220b98f34216cfd42c8b69235
 - 0xec68fe4bedcbdd179bc61704a83cd6a26c720627
 
-Specific user wallets, for Bittrex I think. Generic across ERC-20s
+Specific user wallets, for Bittrex I think. Generic across ERC-20s.
+
+No action needed
 
 ## TokenMintERC20Token
 - 231,662 RSR
 - 0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce
 
+Has many different tokens?
+
+Also, I think this is *just* the Shiba Inu token, and I'm pretty sure it can't do anything with any of these tokens anyway. ??!?
+
+- [ ] Actually, I'm pretty confused about this? Why is there this much of a balance here?
+
 ## GnosisSafeProxy
 - 154,655 RSR
 - 0x13d91d079129b94f37ac92185f7656d75774ce33
-0x68b43fcd1ccdc7ae0405a706764c3aaba7be042e
+- 0x68b43fcd1ccdc7ae0405a706764c3aaba7be042e
 
-## Vyper
-- 144,079 RSR
+It's a Gnosis Safe Proxy. Yep.
+
+No action needed.
+
+## Curve Gauge Contract for RSR
+(The "contract name" that etherscan knows is just "Vyper_contract")
+
+- 142,054 RSR
 - 0x4dc4a289a8e33600d8bd4cf5f6313e43a37adec7
-0xeeeec06f48656e921b39e30d9a205cb2b08ea465
+
+- [ ] Plan. It looks like the Guage contract can't be directly updated, but an admin can "kill" it?
 
 ## BrokerV2
 - 132,718 RSR
 - 0x7ee7ca6e75de79e618e88bdf80d0b1db136b22d0
 
+Broker for the Switcheo Exchange.
+
+Is token-generic, and already controls many tokens
+
+No action needed.
+
 ## DharmaTradeReserve
 - 127,822 RSR
 - 0x0efb068354c10c070ddd64a0e8eaf8f054df7e26
 
+Controls many tokens; is a proxy for a dex-like setup that does not hardcode its token addresses.
+
+No action needed.
+
 ## FeeDistributor
 - 102,301 RSR
 - 0xc4d57904c4435a9348b56051e4dea6055d85a6a9
-0xae99862cb922cf20f341f4292af82cf673df0db6
+- 0xae99862cb922cf20f341f4292af82cf673df0db6
+
+No action needed; tokens handled generically.
 
 ## FyoozCoin
 - 100,026 RSR
 - 0x6bff2fe249601ed0db3a87424a2e923118bb0312
 
+Just a token; RSR is only here in error.
+
+- [ ] Someone else double-check this
+
 ## Reserve
 - 91,378 RSR
 - 0x1dcac83e90775b5f4bc2ffac5a5749e25acc610d
+
+Uh. This is RSV, and I *know* it couldn't ever do anything with these tokens.
+
+We _could_ sweep them from here, and do ... something intelligent with them? It's about $2000.
 
 ## GPv2Settlement
 - 84,267 RSR
 - 0x9008d19f58aabd9ed0d60971565aa8510560ab41
 
+Gnosis Protocol v2 Settlement
+
+Controls many tokens; I assume it can handle them generically.
+
+No action needed.
+
 ## DINGER
 - 74,134 RSR
 - 0x9e5bd9d9fad182ff0a93ba8085b664bcab00fa68
+
+OK, this is some sort of nontrivial token, but it looks like whoever sent RSR here did it in error.
+
+- [ ] Someone else double-check this.
 
 ## UniBrightToken
 - 58,437 RSR
 - 0x8400d94a5cb0fa0d041a3788e395285d61c9ee5e
 
+I suspect this is some mechanism that does generic token handling, but it's really not obvious.
+
+- [ ] I _think_ no action is needed here, but someone else should maybe double-check on that.
+
 ## TokenVesting
 - 53,923 RSR
 - 0x04ba2992bbad61fb7d125a4daf69ce8c1409e14c
+
+This is *our* token vesting contract. Surprised we've got one in the wild with such little funds in it...
+
+- [ ] Plan! We might even need to redeploy this one and redirect its tokens
 
 ## TransparentUpgradeableProxy
 - 44,907 RSR
 - 0x43d037a562099a4c2c95b1e2120cc43054450629
 
+This instance is a proxy for something handling tokens generically.
+
+No action needed.
+
 ## VirtualBalanceRewardPool
 - 43,182 RSR
 - 0x94c259dc4c6df248b0b5d23c055cb7574a587d67
+
+This is the Synthetix wrapper for RSR. 
+
+(HERE: ... not sure yet. This is where I ran out of steam --ME)
 
 ## DSProxy
 - 35,800 RSR
@@ -319,6 +381,11 @@ Specific user wallets, for Bittrex I think. Generic across ERC-20s
 ## BZRXToken
 - 2,400 RSR
 - 0x56d811088235f11c8920698a204a5010a788f4b3
+
+## (a vyper contract)
+- 2,000-ish RSR
+- 0xeeeec06f48656e921b39e30d9a205cb2b08ea465
+
 
 ## TokenHolder
 - 1,766 RSR
