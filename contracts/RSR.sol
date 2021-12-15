@@ -9,19 +9,15 @@ import "./Errors.sol";
 /*
  * @title RSR
  * @dev An ERC20 insurance token for the Reserve Protocol ecosystem.
- * Migration plan from old RSR:
- *  1. Load a balance for an account exactly once.
- *  2. Only load a balance if the old RSR is paused.
- *  3. Ensure old RSR can never be unpaused.
  */
 contract RSR is Ownable, ERC20Permit {
     /// ==== Immutable ====
 
     IOldRSR public immutable oldRSR;
     uint256 public immutable fixedSupply;
-    uint256 public constant NORM = 1e3;
+    uint256 public constant SPLIT_NORM = 1e3;
 
-    /// ==== Mutable ====
+    /// ==== Balance Splits ====
 
     /// OldRSR.address -> RSR.address: Fraction of 1e3 of old balance that should be forwarded
     mapping(address => mapping(address => uint256)) public splits;
@@ -30,6 +26,10 @@ contract RSR is Ownable, ERC20Permit {
     mapping(address => address[]) reverseSplits;
 
     mapping(address => bool) public crossed;
+
+    /// ==== Allowance ====
+
+    mapping(address => mapping(address => bool)) public allowanceCopied;
 
     /// Gas optimization: Cached view of old RSR pause state
     bool private _oldRSRPaused;
@@ -40,15 +40,21 @@ contract RSR is Ownable, ERC20Permit {
         _oldRSRPaused = IOldRSR(prevRSR_).paused();
     }
 
-    modifier ensureCrossed(address account) {
-        if (!_oldRSRPaused) {
-            if (!oldRSR.paused()) {
-                revert Errors.OldRSRUnpaused();
+    modifier ensureCrossed(address from, address to) {
+        // Balances
+        if (!crossed[from]) {
+            if (!_oldRSRPaused) {
+                if (!oldRSR.paused()) {
+                    revert Errors.OldRSRUnpaused();
+                }
+                _oldRSRPaused = true;
             }
-            _oldRSRPaused = true;
+            _cross(from);
         }
-        if (!crossed[account]) {
-            _cross(account);
+
+        // Allowances
+        if (!allowanceCopied[from][to]) {
+            _copyAllowance(from, to);
         }
         _;
     }
@@ -60,7 +66,7 @@ contract RSR is Ownable, ERC20Permit {
     /// @param old The address that has the balance on OldRSR
     /// @param prev The receiving address to siphon tokens away from
     /// @param to The receiving address to siphon tokens towards
-    /// @param split A uint between 0 and the current `old`->`prev` split
+    /// @param split A uint between 0 and the current `old`->`prev` split, maximum 1000 (SPLIT_NORM)
     function siphon(
         address old,
         address prev,
@@ -93,26 +99,26 @@ contract RSR is Ownable, ERC20Permit {
 
     // ========================= External =============================
 
-    /// A light wrapper for ERC20 transfer that crosses the account over if necessary.
+    /// A light wrapper for ERC20 transfer that crosses over if necessary.
     function transfer(address recipient, uint256 amount)
         public
         override
-        ensureCrossed(_msgSender())
+        ensureCrossed(_msgSender(), recipient)
         returns (bool)
     {
         return super.transfer(recipient, amount);
     }
 
-    /// A light wrapper for ERC20 transferFrom that crosses the account over if necessary.
+    /// A light wrapper for ERC20 transferFrom that crosses over if necessary.
     function transferFrom(
         address sender,
         address recipient,
         uint256 amount
-    ) public override ensureCrossed(sender) returns (bool) {
+    ) public override ensureCrossed(sender, recipient) returns (bool) {
         return super.transferFrom(sender, recipient, amount);
     }
 
-    /// @return The fixed total supply of the token.
+    /// @return The fixed total supply of the token
     function totalSupply() public view override returns (uint256) {
         return fixedSupply;
     }
@@ -125,7 +131,7 @@ contract RSR is Ownable, ERC20Permit {
 
     // ========================= Internal =============================
 
-    /// Use the hook for the internal ERC20 internal _transfer function to prevent accidental sends to the contract.
+    /// Prevent accidental sends to the contract
     function _beforeTokenTransfer(
         address,
         address to,
@@ -138,8 +144,16 @@ contract RSR is Ownable, ERC20Permit {
 
     /// Implements a one-time crossover from the old RSR, per account.
     function _cross(address account) internal {
+        require(!crossed[account], "already crossed");
         crossed[account] = true;
         _mint(account, _initialBalance(account));
+    }
+
+    /// Increments `owner`->`spender` allowance by OldRSR's `owner`->`spender` allowance
+    function _copyAllowance(address owner, address spender) internal {
+        require(!allowanceCopied[owner][spender], "already copied allowance");
+        allowanceCopied[owner][spender] = true;
+        _approve(owner, spender, oldRSR.allowance(owner, spender));
     }
 
     /// @return sum The initial balance for an account after crossing
