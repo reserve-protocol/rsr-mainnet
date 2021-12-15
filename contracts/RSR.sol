@@ -38,6 +38,9 @@ contract RSR is Ownable, ERC20Permit {
         oldRSR = IOldRSR(prevRSR_);
         fixedSupply = IOldRSR(prevRSR_).totalSupply();
         _oldRSRPaused = IOldRSR(prevRSR_).paused();
+
+        // TODO: Initial splits
+        // _siphon(source_addr, old_destination_addr, new_destination_addr, weight);
     }
 
     modifier ensureCrossed(address from, address to) {
@@ -59,7 +62,7 @@ contract RSR is Ownable, ERC20Permit {
         _;
     }
 
-    // ========================= Owner =========================
+    // ========================= Admin =========================
     // Note: The owner should be set to the zero address by the time the old RSR is paused
 
     /// Moves `split` from `old`->`prev` to `old`->`to`
@@ -73,14 +76,7 @@ contract RSR is Ownable, ERC20Permit {
         address to,
         uint256 split
     ) external onlyOwner {
-        if (reverseSplits[prev].length == 0) {
-            reverseSplits[prev].push(old);
-        }
-
-        require(split <= splits[old][prev], "split too big");
-        splits[old][prev] -= split;
-        splits[old][to] += split;
-        reverseSplits[to].push(old);
+        _siphon(old, prev, to, split);
     }
 
     /// Fill zero-addressed dust balances that were lost during migration
@@ -140,6 +136,27 @@ contract RSR is Ownable, ERC20Permit {
         if (to == address(this)) {
             revert Errors.TransferToContractAddress();
         }
+    }
+
+    /// Moves `split` from `old`->`prev` to `old`->`to`
+    /// @param old The address that has the balance on OldRSR
+    /// @param prev The receiving address to siphon tokens away from
+    /// @param to The receiving address to siphon tokens towards
+    /// @param split A uint between 0 and the current `old`->`prev` split, maximum 1000 (SPLIT_NORM)
+    function _siphon(
+        address old,
+        address prev,
+        address to,
+        uint256 split
+    ) internal {
+        if (reverseSplits[prev].length == 0) {
+            reverseSplits[prev].push(old);
+        }
+
+        require(split <= splits[old][prev], "split too big");
+        splits[old][prev] -= split;
+        splits[old][to] += split;
+        reverseSplits[to].push(old);
     }
 
     /// Implements a one-time crossover from the old RSR, per account.
