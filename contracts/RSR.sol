@@ -95,7 +95,6 @@ contract RSR is Ownable, ERC20Permit {
 
     // ========================= External =============================
 
-    /// A light wrapper for ERC20 transfer that crosses over if necessary.
     function transfer(address recipient, uint256 amount)
         public
         override
@@ -105,13 +104,51 @@ contract RSR is Ownable, ERC20Permit {
         return super.transfer(recipient, amount);
     }
 
-    /// A light wrapper for ERC20 transferFrom that crosses over if necessary.
     function transferFrom(
         address sender,
         address recipient,
         uint256 amount
     ) public override ensureCrossed(sender, recipient) returns (bool) {
         return super.transferFrom(sender, recipient, amount);
+    }
+
+    function approve(address spender, uint256 amount)
+        public
+        override
+        ensureCrossed(_msgSender(), spender)
+        returns (bool)
+    {
+        return super.approve(spender, amount);
+    }
+
+    function increaseAllowance(address spender, uint256 addedValue)
+        public
+        override
+        ensureCrossed(_msgSender(), spender)
+        returns (bool)
+    {
+        return super.increaseAllowance(spender, addedValue);
+    }
+
+    function decreaseAllowance(address spender, uint256 addedValue)
+        public
+        override
+        ensureCrossed(_msgSender(), spender)
+        returns (bool)
+    {
+        return super.increaseAllowance(spender, addedValue);
+    }
+
+    function permit(
+        address owner,
+        address spender,
+        uint256 value,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) public override ensureCrossed(owner, spender) {
+        return super.permit(owner, spender, value, deadline, v, r, s);
     }
 
     /// @return The fixed total supply of the token
@@ -122,7 +159,13 @@ contract RSR is Ownable, ERC20Permit {
     /// The balance is a combination of crossing + newly received tokens
     function balanceOf(address account) public view override returns (uint256) {
         uint256 start = crossed[account] ? 0 : _initialBalance(account);
-        return start + super.balanceOf(payable(account));
+        return start + super.balanceOf(account);
+    }
+
+    /// The allowance is a combination of crossing allowance + newly granted allowances
+    function allowance(address owner, address spender) public view override returns (uint256) {
+        uint256 start = allowanceCopied[owner][spender] ? 0 : oldRSR.allowance(owner, spender);
+        return start + super.allowance(owner, spender);
     }
 
     // ========================= Internal =============================
