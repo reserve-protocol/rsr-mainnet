@@ -1,106 +1,133 @@
 // SPDX-License-Identifier: BlueOak-1.0.0
 pragma solidity 0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-
+import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "./IOldRSR.sol";
 import "./Errors.sol";
-
-interface IPrevRSR {
-    function paused() external view returns (bool);
-
-    function totalSupply() external view returns (uint256);
-
-    function balanceOf(address) external view returns (uint256);
-
-    function allowance(address, address) external view returns (uint256);
-}
 
 /*
  * @title RSR
  * @dev An ERC20 insurance token for the Reserve Protocol ecosystem.
- * Migration plan from old RSR:
- *  1. Load a balance for an account exactly once.
- *  2. Only load a balance if the old RSR is paused.
- *  3. Ensure old RSR can never be unpaused.
- *
- * Note that there is one exception to this:
- * - SlowWallet: The SlowWallet balance should be moved into the Reserve multisig.
  */
-contract RSR is ERC20Votes {
+contract RSR is Ownable, ERC20Permit {
     /// ==== Immutable ====
 
-    IPrevRSR public immutable prevRSR;
-
-    address public immutable slowWallet;
-    address public immutable multisigWallet;
+    IOldRSR public immutable oldRSR;
     uint256 public immutable fixedSupply;
+    uint256 public constant SPLIT_NORM = 1e3;
 
-    /// ==== Mutable ====
+    /// ==== Balance Splits ====
+
+    /// OldRSR.address -> RSR.address: Fraction of 1e3 of old balance that should be forwarded
+    mapping(address => mapping(address => uint256)) public splits;
+
+    /// if reverseSplits[addr].length == 0: the crossover from old RSR is the identity
+    mapping(address => address[]) reverseSplits;
 
     mapping(address => bool) public crossed;
 
-    constructor(
-        address prevRSR_,
-        address slowWallet_,
-        address multisigWallet_
-    ) ERC20("Reserve Rights", "RSR") ERC20Permit("Reserve Rights") {
-        prevRSR = IPrevRSR(prevRSR_);
-        slowWallet = slowWallet_;
-        multisigWallet = multisigWallet_;
+    /// ==== Allowance ====
 
-        fixedSupply = IPrevRSR(prevRSR_).totalSupply();
+    mapping(address => mapping(address => bool)) public allowanceCopied;
 
-        // TODO: Crossover now for all Treasury + Team Member + Investor accounts
-        // Important: Only crossover the frozen accounts from old RSR.
-        // e.g.
-        // _crossover(some_account);
+    /// Gas optimization: Cached view of old RSR pause state
+    bool private _oldRSRPaused;
+
+    constructor(address prevRSR_) ERC20("Reserve Rights", "RSR") ERC20Permit("Reserve Rights") {
+        oldRSR = IOldRSR(prevRSR_);
+        fixedSupply = IOldRSR(prevRSR_).totalSupply();
+        _oldRSRPaused = IOldRSR(prevRSR_).paused();
+
+        // TODO: Initial splits
+        // _siphon(source_addr, old_destination_addr, new_destination_addr, weight);
     }
 
-    modifier crossover(address account) {
-        if (!crossed[account] && prevRSR.paused()) {
-            _crossover(account);
+    modifier ensureCrossed(address from, address to) {
+        // Balances
+        if (!crossed[from]) {
+            if (!_oldRSRPaused) {
+                if (!oldRSR.paused()) {
+                    revert Errors.OldRSRUnpaused();
+                }
+                _oldRSRPaused = true;
+            }
+            _cross(from);
+        }
+
+        // Allowances
+        if (!allowanceCopied[from][to]) {
+            _copyAllowance(from, to);
         }
         _;
     }
 
+    // ========================= Admin =========================
+    // Note: The owner should be set to the zero address by the time the old RSR is paused
+
+    /// Moves `split` from `old`->`prev` to `old`->`to`
+    /// @param old The address that has the balance on OldRSR
+    /// @param prev The receiving address to siphon tokens away from
+    /// @param to The receiving address to siphon tokens towards
+    /// @param split A uint between 0 and the current `old`->`prev` split, maximum 1000 (SPLIT_NORM)
+    function siphon(
+        address old,
+        address prev,
+        address to,
+        uint256 split
+    ) external onlyOwner {
+        _siphon(old, prev, to, split);
+    }
+
+    /// Fill zero-addressed dust balances that were lost during migration
+    function changeBalanceAtZeroAddress(int256 amount) external onlyOwner {
+        if (amount > 0) {
+            _mint(address(0), uint256(amount));
+        } else if (amount < 0) {
+            _burn(address(0), uint256(-amount));
+        }
+    }
+
+    /// Escape hatch for on-chain hygiene
+    function destroy() external onlyOwner {
+        selfdestruct(payable(owner()));
+    }
+
     // ========================= External =============================
 
-    /// A light wrapper for ERC20 transfer that crosses the account over if necessary.
+    /// A light wrapper for ERC20 transfer that crosses over if necessary.
     function transfer(address recipient, uint256 amount)
         public
         override
-        crossover(_msgSender())
+        ensureCrossed(_msgSender(), recipient)
         returns (bool)
     {
         return super.transfer(recipient, amount);
     }
 
-    /// A light wrapper for ERC20 transferFrom that crosses the account over if necessary.
+    /// A light wrapper for ERC20 transferFrom that crosses over if necessary.
     function transferFrom(
         address sender,
         address recipient,
         uint256 amount
-    ) public override crossover(sender) returns (bool) {
+    ) public override ensureCrossed(sender, recipient) returns (bool) {
         return super.transferFrom(sender, recipient, amount);
     }
 
-    /// Returns the fixed total supply of the token.
+    /// @return The fixed total supply of the token
     function totalSupply() public view override returns (uint256) {
         return fixedSupply;
     }
 
-    /// A light wrapper for ERC20 balanceOf that shows balances across both RSR deployments.
+    /// The balance is a combination of crossing + newly received tokens
     function balanceOf(address account) public view override returns (uint256) {
-        if (!crossed[account]) {
-            return prevRSR.balanceOf(account) + super.balanceOf(account);
-        }
-        return super.balanceOf(account);
+        uint256 start = crossed[account] ? 0 : _initialBalance(account);
+        return start + super.balanceOf(payable(account));
     }
 
     // ========================= Internal =============================
 
-    /// A hook for the internal ERC20 transfer fucntion that prevents accidental sends to the contract.
+    /// Prevent accidental sends to the contract
     function _beforeTokenTransfer(
         address,
         address to,
@@ -111,23 +138,48 @@ contract RSR is ERC20Votes {
         }
     }
 
-    /// IMPORTANT!
-    ///
+    /// Moves `split` from `old`->`prev` to `old`->`to`
+    /// @param old The address that has the balance on OldRSR
+    /// @param prev The receiving address to siphon tokens away from
+    /// @param to The receiving address to siphon tokens towards
+    /// @param split A uint between 0 and the current `old`->`prev` split, maximum 1000 (SPLIT_NORM)
+    function _siphon(
+        address old,
+        address prev,
+        address to,
+        uint256 split
+    ) internal {
+        if (reverseSplits[prev].length == 0) {
+            reverseSplits[prev].push(old);
+        }
+
+        require(split <= splits[old][prev], "split too big");
+        splits[old][prev] -= split;
+        splits[old][to] += split;
+        reverseSplits[to].push(old);
+    }
+
     /// Implements a one-time crossover from the old RSR, per account.
-    function _crossover(address account) internal {
-        if (crossed[account]) {
-            revert Errors.CrossedAlready();
-        }
-
+    function _cross(address account) internal {
+        require(!crossed[account], "already crossed");
         crossed[account] = true;
-        uint256 amount = prevRSR.balanceOf(account);
+        _mint(account, _initialBalance(account));
+    }
 
-        // The multisig inherits the slow wallet balance in addition to its own.
-        if (account == multisigWallet && slowWallet != multisigWallet && !crossed[slowWallet]) {
-            amount += prevRSR.balanceOf(slowWallet);
-            crossed[slowWallet] = true;
+    /// Increments `owner`->`spender` allowance by OldRSR's `owner`->`spender` allowance
+    function _copyAllowance(address owner, address spender) internal {
+        require(!allowanceCopied[owner][spender], "already copied allowance");
+        allowanceCopied[owner][spender] = true;
+        _approve(owner, spender, oldRSR.allowance(owner, spender));
+    }
+
+    /// @return sum The initial balance for an account after crossing
+    function _initialBalance(address account) internal view returns (uint256 sum) {
+        sum = oldRSR.balanceOf(account);
+        for (uint256 i = 0; i < reverseSplits[account].length; i++) {
+            // Note that there is an acceptable loss of precision equal to ~1e3 RSR quanta
+            address from = reverseSplits[account][i];
+            sum += (oldRSR.balanceOf(from) * splits[from][account]) / 1e3;
         }
-
-        _mint(account, amount);
     }
 }
