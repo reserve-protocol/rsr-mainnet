@@ -6,10 +6,10 @@ import "./RSR.sol";
 import "./ISpell.sol";
 
 /*
- * @title UpgradeSpell
+ * @title SiphonSpell
  * @dev An ERC20 insurance token for the Reserve Protocol ecosystem.
  */
-contract UpgradeSpell is ISpell {
+contract SiphonSpell is ISpell {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     RSR public immutable rsr;

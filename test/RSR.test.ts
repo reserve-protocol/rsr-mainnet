@@ -1,9 +1,9 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { expect } from 'chai'
 import { ethers } from 'hardhat'
-import { ONE, ZERO } from '../common/numbers'
 
-import { MockERC20, ReserveRightsTokenMock, RSR } from '../typechain'
+import { ONE, ZERO } from '../common/numbers'
+import { ERC20Mock, ReserveRightsTokenMock, RSR, SiphonSpellMock } from '../typechain'
 
 // eslint-disable-next-line node/no-missing-import
 let owner: SignerWithAddress
@@ -11,6 +11,7 @@ let addr1: SignerWithAddress
 let addr2: SignerWithAddress
 let addr3: SignerWithAddress
 let oldRSR: ReserveRightsTokenMock
+let siphonSpell: SiphonSpellMock
 let rsr: RSR
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 const WEIGHT_ONE = 1000
@@ -26,28 +27,31 @@ async function pauseOldRSR() {
   await rsr.renounceOwnership()
 }
 
-describe('RSR contract', function () {
+describe('RSR contract', () => {
   beforeEach(async function () {
     ;[owner, addr1, addr2, addr3] = await ethers.getSigners()
-    // Deploy MockERC20 to stand-in for oldOldRSR
-    const OldOldRSR = await ethers.getContractFactory('MockERC20')
-    const oldOldRSR = <MockERC20>await OldOldRSR.deploy('Reserve Rights', 'RSR')
+    // Deploy ERC20Mock to stand-in for oldOldRSR
+    const OldOldRSR = await ethers.getContractFactory('ERC20Mock')
+    const oldOldRSR = <ERC20Mock>await OldOldRSR.deploy('Reserve Rights', 'RSR')
     // Deploy Previous RSR (Pausable)
     const OldRSR = await ethers.getContractFactory('ReserveRightsTokenMock')
     oldRSR = <ReserveRightsTokenMock>await OldRSR.deploy(oldOldRSR.address)
     // Deploy new RSR
     const RSR = await ethers.getContractFactory('RSR')
     rsr = <RSR>await RSR.connect(owner).deploy(oldRSR.address)
+    // Deploy siphon spell
+    const SiphonSpell = await ethers.getContractFactory('SiphonSpellMock')
+    siphonSpell = <SiphonSpellMock>await SiphonSpell.connect(owner).deploy(rsr.address)
   })
 
-  describe('Deployment', async () => {
+  describe('Deployment', () => {
     it('Should inherit the total supply for the old RSR', async () => {
       const totalSupplyPrev = await oldRSR.totalSupply()
       expect(await rsr.totalSupply()).to.equal(totalSupplyPrev)
     })
   })
 
-  describe('Transition state', async () => {
+  describe('Transition state', () => {
     beforeEach(async () => {
       await setInitialBalances()
     })
@@ -55,7 +59,7 @@ describe('RSR contract', function () {
     it('cannot change weight if the account is not the owner', async () => {
       await expect(
         rsr.connect(addr1).siphon(ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, WEIGHT_ONE)
-      ).to.be.revertedWith('Ownable: caller is not the owner')
+      ).to.be.revertedWith('only regent or owner')
     })
 
     it('should change the account weight', async () => {
@@ -100,7 +104,7 @@ describe('RSR contract', function () {
       it('cannot change weight after RSR Transition', async () => {
         await expect(
           rsr.connect(owner).siphon(ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, WEIGHT_ONE)
-        ).to.be.revertedWith('Ownable: caller is not the owner')
+        ).to.be.revertedWith('only regent or owner')
       })
 
       it('By default the accounts preserve their balances (dont change weight)', async () => {
