@@ -76,16 +76,8 @@ contract SiphonSpell is ISpell {
     function cast() external override {
         require(!spent, "the upgrade spell is spent");
         require(msg.sender == address(rsr), "rsr only");
-        _doSiphons();
+
         spent = true;
-    }
-
-    function _alloc(address from, Alloc memory alloc) internal {
-        addrs.add(from);
-        allocs[from].push(alloc);
-    }
-
-    function _doSiphons() internal {
         for (uint256 i = 0; i < addrs.length(); i++) {
             for (uint256 j = 0; j < allocs[addrs.at(i)].length; j++) {
                 rsr.siphon(
@@ -96,5 +88,10 @@ contract SiphonSpell is ISpell {
                 );
             }
         }
+    }
+
+    function _alloc(address from, Alloc memory alloc) internal {
+        addrs.add(from);
+        allocs[from].push(alloc);
     }
 }

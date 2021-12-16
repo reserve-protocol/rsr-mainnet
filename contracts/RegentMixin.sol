@@ -18,6 +18,10 @@ abstract contract RegentMixin is Ownable {
         _;
     }
 
+    function regent() public view returns (address) {
+        return _regent;
+    }
+
     function _grantRegent(address regent) internal {
         emit RegentChanged(_regent, regent);
         _regent = regent;

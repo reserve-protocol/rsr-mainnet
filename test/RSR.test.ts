@@ -11,7 +11,6 @@ let addr1: SignerWithAddress
 let addr2: SignerWithAddress
 let addr3: SignerWithAddress
 let oldRSR: ReserveRightsTokenMock
-let siphonSpell: SiphonSpellMock
 let rsr: RSR
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 const WEIGHT_ONE = 1000
@@ -39,9 +38,6 @@ describe('RSR contract', () => {
     // Deploy new RSR
     const RSR = await ethers.getContractFactory('RSR')
     rsr = <RSR>await RSR.connect(owner).deploy(oldRSR.address)
-    // Deploy siphon spell
-    const SiphonSpell = await ethers.getContractFactory('SiphonSpellMock')
-    siphonSpell = <SiphonSpellMock>await SiphonSpell.connect(owner).deploy(rsr.address)
   })
 
   describe('Deployment', () => {
@@ -132,6 +128,22 @@ describe('RSR contract', () => {
         expect(await rsr.weights(addr2.address, addr2.address)).to.equal(0)
         expect(await rsr.hasWeights(addr2.address)).to.equal(false)
       })
+    })
+  })
+
+  describe('Siphon Spell', () => {
+    let siphonSpell: SiphonSpellMock
+
+    beforeEach(async () => {
+      // Deploy siphon spell
+      const SiphonSpell = await ethers.getContractFactory('SiphonSpellMock')
+      siphonSpell = <SiphonSpellMock>await SiphonSpell.connect(owner).deploy(rsr.address)
+    })
+
+    it.only('Should cast with no changes', async () => {
+      await rsr.connect(owner).castSpell(siphonSpell.address)
+      expect(await rsr.regent()).to.equal(ZERO_ADDRESS)
+      expect(await rsr.owner()).to.equal(owner.address)
     })
   })
 
