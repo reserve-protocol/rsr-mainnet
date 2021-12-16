@@ -15,49 +15,77 @@ contract RSR is Ownable, ERC20Permit {
 
     IOldRSR public immutable oldRSR;
     uint16 public constant WEIGHT_ONE = 1e3;
+    /// A uint16 value `w` is a _weight_, and it represents the fractional value `w / WEIGHT_ONE`.
     uint256 private immutable fixedSupply;
 
-    /// Assumption: Once OldRSR is ever paused, it is never unpaused and its balances and
-    /// allowances cannot change.
+    /** @dev
+    Relative Immutability
+    =====================
 
-    /// Property: Once OldRSR is ever paused, `weights` and `origins` become immutable
+    We assume that, once OldRSR is paused, its paused status, balances, and allowances
+    are immutable.
 
-    /// Invariant: For all A, either
-    ///   - hasWeights[A] and sum_B(weights[A][B]) == WEIGHT_ONE, OR
-    ///   - !hasWeights[A] and for all B: weights[A][B] == 0 (ie unset)
+    After OldRSR is paused, that contract's values for hasWeights, weights, and origins
+    are immutable.
 
-    /// OldRSR.address -> RSR.address: Fraction of 1e3 of old balance that should be forwarded
-    mapping(address => mapping(address => uint16)) public weights;
+    Before OldRSR is paused, the booleans in balCrossed and allownceCrossed are all
+    false. After OldRSR is paused, the entries in those maps can change only from false
+    to true.
+    */
+
+    /// Invariant: For all addresses A,
+    /// if !hasWeights[A], then for all B, weights[A][B] == 0
+    /// if hasWeights[A], then sum_{all addresses B} (weights[A][B]) == WEIGHT_ONE
+    ///
+    /// hasWeights: map(OldRSR addr -> bool)
+    /// If !hasWeights[A], then A's balances should be forwarded as by default.
+    /// If hasWeights[A], then A's balances should be forwarded as by weights[A][_]
     mapping(address => bool) public hasWeights;
 
-    /// Invariant: For all A and B, if weights[A][B] > 0, then A is in origins[B]
+    /// weights: map(OldRSR addr -> RSR addr -> uint16 weight)
+    /// weights[A][B] is the fraction of A's old balance that should be forwarded to B.
+    ///
+    /// (Again, with the caveat of hasWeights; if weights[A][B] == 0 for all B, then
+    ///  hasWeights[A] = false, and A's old balance should just stay where it is!)
+    mapping(address => mapping(address => uint16)) public weights;
 
-    /// RSR.address -> OldRSR.address[]
+    /// Invariant: For all A and B, if weights[A][B] > 0, then A is in origins[B]
+    ///
+    /// origins: map(RSR addr -> set(OldRSR addr))
     mapping(address => EnumerableSet.AddressSet) origins;
 
-    /// Properties: For all A,
-    ///   - balCrossed[A] == false when OldRSR.unpaused()
-    ///   - Once balCrossed[A] == true, it remains true forever
-    ///   - When balCrossed[A] == true, balanceOf(A) == this._balances[A]
-    ///   - When balCrossed[A] == false, balanceOf(A) == this._balances[A] + all inherited RSR
-    ///   - where inherited RSR = sum_B(oldRSR.balanceOf(B) * weights[B][A]) / WEIGHT_ONE
-
+    /// balCrossed[A]: true iff we've already crossed oldRSR balances into this._balances[A]
     mapping(address => bool) public balCrossed;
 
-    /// Properties: For all A and B,
-    ///   - allowanceCrossed[A][B] == false when OldRSR.unpaused()
-    ///   - Once allowanceCrossed[A][B] == true, it remains true forever
-    ///   - When allowanceCrossed[A][B] == true, allowance(A, B) == this._allowance[A][B]
-    ///   - When allowanceCrossed[A][B] == false, allowance(A, B) == oldRSR.allowance(A, B) && this._allowance[A][B] == 0
-
+    /// allowanceCrossed[A][B]: true iff we've already crossed the oldRSR allowance into
+    ///   this._allowance[A][B].
     mapping(address => mapping(address => bool)) public allowanceCrossed;
+
+    /** @dev A few mathematical functions, so we can be really precise here:
+
+    totalWeight(A, B) = (hasWeights[A] ? weights[A][B] : ((A == B) ? WEIGHT_ONE : 0))
+    inheritedBalance(A) = sum_{all addrs B} ( oldRSR.balanceOf(A) * totalWeight(A,B) / WEIGHT_ONE )
+
+    Properties of balances:
+
+    For all addresses A:
+    - If OldRSR is not yet paused, balCrossed[A] is false.
+    - Once balCrossed[A] is true, it stays true forever.
+    - balanceOf(A) == this._balances[A] + (balCrossed[A} ? inheritedBalance(A) : 0)
+    - balanceOf satisfies all the usual rules for ERC20 tokens.
+
+    Properties of allowances:
+
+    For all addresses A and B,
+    - If OldRSR is not yet paused, then allowanceCrossed[A][B] is false
+    - Once allowanceCrossed[A][B] == true, it stays true forever
+    - allowance(A,B) == allowanceCrossed[A][B] ? this._allowance[A][B] : oldRSR.allowance(A,B)
+    - allowance satisfies all the usual rules for ERC20 tokens.
+    */
 
     constructor(address prevRSR_) ERC20("Reserve Rights", "RSR") ERC20Permit("Reserve Rights") {
         oldRSR = IOldRSR(prevRSR_);
         fixedSupply = IOldRSR(prevRSR_).totalSupply();
-
-        // TODO: Initial weights
-        // _siphon(source_addr, old_destination_addr, new_destination_addr, weight);
     }
 
     modifier onlyAfterPause() {
