@@ -38,3 +38,5 @@ jobs:
 
       - name: Run unit tests
         run: npx hardhat test
+        env:
+          MAINNET_FORK_RPC_URL: ${{ secrets.MAINNET_FORK_RPC_URL }}
