@@ -119,18 +119,18 @@ contract RSR is Ownable, ERC20Permit {
     // Note: The owner should be set to the zero address by the time the old RSR is paused
 
     /// Moves weight from old->prev to old->to
-    /// @param old The address that has the balance on OldRSR
-    /// @param prev The receiving address to siphon tokens away from
-    /// @param to The receiving address to siphon tokens towards
+    /// @param from The address that has the balance on OldRSR
+    /// @param oldTo The receiving address to siphon tokens away from
+    /// @param newTo The receiving address to siphon tokens towards
     /// @param weight A uint between 0 and the current old->prev weight, max 1000 (WEIGHT_ONE)
     function siphon(
-        address old,
-        address prev,
-        address to,
+        address from,
+        address oldTo,
+        address newTo,
         uint16 weight
     ) external onlyOwner {
         require(!oldRSR.paused(), "old RSR is already paused");
-        _siphon(old, prev, to, weight);
+        _siphon(from, oldTo, newTo, weight);
     }
 
     /// Fill zero-addressed dust balances that were lost during migration
@@ -140,11 +140,6 @@ contract RSR is Ownable, ERC20Permit {
         } else if (amount < 0) {
             _burn(address(0), uint256(-amount));
         }
-    }
-
-    /// Escape hatch for on-chain hygiene
-    function destroy() external onlyOwner {
-        selfdestruct(payable(owner()));
     }
 
     // ========================= After Old RSR is Paused =============================
@@ -244,26 +239,27 @@ contract RSR is Ownable, ERC20Permit {
     // ========================= Internal =============================
 
     /// Moves weight from old->prev to old->to
-    /// @param old The address that has the balance on OldRSR
-    /// @param prev The receiving address to siphon tokens away from
-    /// @param to The receiving address to siphon tokens towards
-    /// @param weight A uint between 0 and the current old->prev weight, max 1000 (WEIGHT_ONE)
+    /// @param from The address that has the balance on OldRSR
+    /// @param oldTo The receiving address to siphon tokens away from
+    /// @param newTo The receiving address newTo siphon tokens towards
+    /// @param weight A uint between 0 and the current from->oldTo weight, max 1000 (WEIGHT_ONE)
     function _siphon(
-        address old,
-        address prev,
-        address to,
+        address from,
+        address oldTo,
+        address newTo,
         uint16 weight
     ) internal {
-        if (!hasWeights[old]) {
-            origins[old].add(old);
-            weights[old][old] = WEIGHT_ONE;
-            hasWeights[old] = true;
+        if (!hasWeights[from]) {
+            origins[from].add(from);
+            weights[from][from] = WEIGHT_ONE;
+            hasWeights[from] = true;
         }
 
-        require(weight <= weights[old][prev], "weight too big");
-        weights[old][prev] -= weight;
-        weights[old][to] += weight;
-        origins[to].add(old);
+        require(weight <= weights[from][oldTo], "weight too big");
+        require(from != address(0), "from cannot be zero address");
+        weights[from][oldTo] -= weight;
+        weights[from][newTo] += weight;
+        origins[newTo].add(from);
     }
 
     /// @return sum The starting balance for an account after crossing from old RSR
@@ -274,7 +270,7 @@ contract RSR is Ownable, ERC20Permit {
         for (uint256 i = 0; i < origins[account].length(); i++) {
             // Note that there is an acceptable loss of precision equal to ~1e3 RSR quanta
             address from = origins[account].at(i);
-            sum += (oldRSR.balanceOf(from) * weights[from][account]) / 1e3;
+            sum += (oldRSR.balanceOf(from) * weights[from][account]) / WEIGHT_ONE;
         }
     }
 }
