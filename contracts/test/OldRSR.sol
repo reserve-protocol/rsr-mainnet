@@ -1,10 +1,8 @@
+// solhint-disable-file
 // SPDX-License-Identifier: BlueOak-1.0.0
 /**
- * This file is a copy of the verified code for PreRSR.
- * It's important to use this code to mock old RSR because a lot has changed
- * about smart contract development since PreRSR was deployed. This code
- * should be used in all our unit tests.
- *
+ * After this comment section, the rest of this file is a verbatim copy of the
+ * verified code for OldRSR.
  *
  * Etherscan verified on 2019-05-17
  */
