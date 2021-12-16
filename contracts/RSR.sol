@@ -90,7 +90,7 @@ contract RSR is Ownable, ERC20Permit {
 
     modifier onlyAfterPause() {
         require(oldRSR.paused(), "waiting for oldRSR to pause");
-        require(owner == address(0), "owner must be set to zero");
+        require(owner() == address(0), "owner must be set to zero");
         _;
     }
 
