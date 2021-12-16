@@ -52,7 +52,7 @@ contract RSR is Ownable, ERC20Permit {
     /// Invariant: For all A and B, if weights[A][B] > 0, then A is in origins[B]
     ///
     /// origins: map(RSR addr -> set(OldRSR addr))
-    mapping(address => EnumerableSet.AddressSet) origins;
+    mapping(address => EnumerableSet.AddressSet) private origins;
 
     /// balCrossed[A]: true iff we've already crossed oldRSR balances into this._balances[A]
     mapping(address => bool) public balCrossed;
@@ -118,11 +118,11 @@ contract RSR is Ownable, ERC20Permit {
     // ========================= Admin =========================
     // Note: The owner should be set to the zero address by the time the old RSR is paused
 
-    /// Moves `weight` from `old`->`prev` to `old`->`to`
+    /// Moves weight from old->prev to old->to
     /// @param old The address that has the balance on OldRSR
     /// @param prev The receiving address to siphon tokens away from
     /// @param to The receiving address to siphon tokens towards
-    /// @param weight A uint between 0 and the current `old`->`prev` weight, maximum 1000 (WEIGHT_ONE)
+    /// @param weight A uint between 0 and the current old->prev weight, max 1000 (WEIGHT_ONE)
     function siphon(
         address old,
         address prev,
@@ -243,11 +243,11 @@ contract RSR is Ownable, ERC20Permit {
 
     // ========================= Internal =============================
 
-    /// Moves `weight` from `old`->`prev` to `old`->`to`
+    /// Moves weight from old->prev to old->to
     /// @param old The address that has the balance on OldRSR
     /// @param prev The receiving address to siphon tokens away from
     /// @param to The receiving address to siphon tokens towards
-    /// @param weight A uint between 0 and the current `old`->`prev` weight, maximum 1000 (WEIGHT_ONE)
+    /// @param weight A uint between 0 and the current old->prev weight, max 1000 (WEIGHT_ONE)
     function _siphon(
         address old,
         address prev,
