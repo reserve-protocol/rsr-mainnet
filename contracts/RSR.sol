@@ -2,18 +2,20 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./IOldRSR.sol";
+import "./RegentMixin.sol";
+import "./ISpell.sol";
 
 /*
  * @title RSR
  * @dev An ERC20 insurance token for the Reserve Protocol ecosystem.
  */
-contract RSR is Ownable, ERC20Permit {
+contract RSR is RegentMixin, ERC20Permit {
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    IOldRSR public immutable oldRSR;
+    ERC20Pausable public immutable oldRSR;
     uint16 public constant WEIGHT_ONE = 1e3;
     /// A uint16 value `w` is a _weight_, and it represents the fractional value `w / WEIGHT_ONE`.
     uint256 private immutable fixedSupply;
@@ -84,8 +86,8 @@ contract RSR is Ownable, ERC20Permit {
     */
 
     constructor(address prevRSR_) ERC20("Reserve Rights", "RSR") ERC20Permit("Reserve Rights") {
-        oldRSR = IOldRSR(prevRSR_);
-        fixedSupply = IOldRSR(prevRSR_).totalSupply();
+        oldRSR = ERC20Pausable(prevRSR_);
+        fixedSupply = ERC20Pausable(prevRSR_).totalSupply();
     }
 
     modifier onlyAfterPause() {
@@ -128,9 +130,16 @@ contract RSR is Ownable, ERC20Permit {
         address oldTo,
         address newTo,
         uint16 weight
-    ) external onlyOwner {
+    ) external onlyAdmin {
         require(!oldRSR.paused(), "old RSR is already paused");
         _siphon(from, oldTo, newTo, weight);
+    }
+
+    /// Grants regent to an ISpell, casts the spell, and restore regent
+    function castSpell(ISpell spell) external onlyOwner {
+        _grantRegent(address(spell));
+        spell.cast();
+        _grantRegent(address(0));
     }
 
     /// Fill zero-addressed dust balances that were lost during migration
