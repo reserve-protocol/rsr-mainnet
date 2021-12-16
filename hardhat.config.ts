@@ -13,9 +13,6 @@ const MAINNET_RPC_URL = process.env.MAINNET_RPC_URL || ''
 const ROPSTEN_RPC_URL = process.env.ROPSTEN_RPC_URL || ''
 const MNEMONIC = process.env.MNEMONIC || ''
 
-console.log(MAINNET_RPC_URL)
-console.log(ROPSTEN_RPC_URL)
-
 const config: HardhatUserConfig = {
   solidity: {
     compilers: [
