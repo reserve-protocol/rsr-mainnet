@@ -7,83 +7,6 @@ This Markdown file lists every Ethereum address that:
 
 I first binned these contracts by name; most deployed contract instances were simply named "Proxy". Each of the following headings, then, is a unique contract _name_ holding some RSR. There certainly are contract-name collisions (e.g, ReserveRightsToken catches both our current RSR and a *really* old RSR deployment, for instance), but surprisingly few, and usually they're very related.
 
-# Look Again: confused or unsure
-
-- I'm not sure what's going on
-- It's a bridge, the contract should work just fine, but I need to do a deeper dive to figure out if off-chain dependencies will break
-
-## TokenMintERC20Token
-- 231,662 RSR
-- 0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce
-
-Has many different tokens?
-
-Also, I think this is *just* the Shiba Inu token, and I'm pretty sure it can't do anything with any of these tokens anyway. ??!?
-
-- [ ] Actually, I'm pretty confused about this? Why is there this much of a balance here? Double-check that these tokens really are just lost.
-
-## DSProxy
-- 35,800 RSR
-- 0xa90f8f0702319f8f3ff140bd43720459983a3c92
-
-This is basically being used as a token wallet, I think.
-
-- [ ] Check on how this proxy is currently controlled. This could be easy or complicated, depending.
-
-## Wormhole
-- 711,084 RSR
-- 0xf92cd566ea4864356c5491c177a430c222d7e678
-
-Generic bridge, owns many tokens.
-
-- [ ] Where does this go? Offchain things break?
-
-## EternalStorageProxy
-- 435,801 RSR
-- 0x88ad09518695c6c3712ac10a214be5109a655671
-
-Owns many tokens. Seems to be a proxy for a generic bridge contract.
-
-- [ ] Verify no action needed
-
-## ERC20PredicateProxy
-- 370,955 RSR
-- 0x40ec5b33f54e0e8a33a975908c5ba1c14e5bbbdf
-
-Owns many tokens. Seems to be a Polygon bridge contract.
-
-- [ ] Verify no action needed
-
-## Uniswap V1 proxy? (a vyper contract)
-- 2,000-ish RSR
-- 0xeeeec06f48656e921b39e30d9a205cb2b08ea465
-
-Proxy for 0x2157a7894439191e520825fe9399ab8655e0f708
-- [ ] Plan? From a quick look, it's really hard to tell if this RSR isn't just already stuck. I think they are.
-
-## DINGER
-- 74,134 RSR
-- 0x9e5bd9d9fad182ff0a93ba8085b664bcab00fa68
-
-OK, this is some sort of nontrivial token, but it looks like whoever sent RSR here did it in error.
-
-- [ ] Someone else double-check this.
-
-## SetToken
-- 31,355 RSR
-- 0x64ddf354fd42935e0286425001aac7d3c3995d6d
-- 0x66903f7b0f8499fea922ce40cf359754d7f47c73
-
-- [ ] ... Look into this more deeply.
-
-## ARTHRSRPool
-- 14,144 RSR
-- 0x9ba1ac9bf8bb002bc36966f6135a4c27c9ba08bf
-
-- I think this *might* be fine -- looks like token interactions are generic, but I'm still worried.
-  In particular, the contract is named after a token pair, and in fact that pair only holds ARTH and RSR.
-
-
 # Our Contracts
 ## SlowWallet
 - 49,448,001,323 RSR
@@ -126,7 +49,44 @@ This is *our* token vesting contract. Surprised we've got one in the wild with s
 
 - [ ] Sweep from here; this is our own RSV Manager. -_-
 
-# Contracts We Will Break
+# Bridge Contracts
+## Wormhole
+- 711,084 RSR
+- 0xf92cd566ea4864356c5491c177a430c222d7e678
+
+Generic bridge, owns many tokens.
+
+This is a Solana bridge.
+
+- https://v1.wormholebridge.com/#/help
+- https://github.com/solana-labs/oyster
+
+- [ ] Reach out to bridge operators
+
+## EternalStorageProxy
+- 435,801 RSR
+- 0x88ad09518695c6c3712ac10a214be5109a655671
+
+Owns many tokens. Seems to be a proxy for a generic bridge contract to the POA network. (the xDai network?)
+
+- [ ] Reach out to bridge operators
+
+## ERC20PredicateProxy
+- 370,955 RSR
+- 0x40ec5b33f54e0e8a33a975908c5ba1c14e5bbbdf
+
+Owns many tokens. Seems to be a Polygon bridge contract.
+
+- [ ] Reach out to bridge operators
+
+# Contracts Needing Action:
+
+These contracts will (or are likely to) break unless some sort of
+action is taken, probably ahead of time.
+
+For many of these contracts, I think there's no option except getting
+the people controlling value in them to back out their deposits before
+we freeze oldRSR.
 ## StandardPoolConverter
 - 23,938,026 RSR
 - 0x4a0737d8a87c9ffc31adf85d578339d5c7a5270d
@@ -186,7 +146,39 @@ This is the Synthetix wrapper for RSR.
 - 0xad4768f408dd170e62e074188d81a29ae31b8fd8
 
 - [ ] Plan. (Oh no, the RSR contract address is _hardcoded_ in this contract. It'll have to be wound down!)
+## Uniswap V1 proxy? (a vyper contract)
+- 2,000-ish RSR
+- 0xeeeec06f48656e921b39e30d9a205cb2b08ea465
+
+Proxy for 0x2157a7894439191e520825fe9399ab8655e0f708
+- [ ] Plan? From a quick look, it's really hard to tell if this RSR isn't just already stuck. I think they are.
+
+## SetToken
+- 31,355 RSR
+- 0x64ddf354fd42935e0286425001aac7d3c3995d6d
+- 0x66903f7b0f8499fea922ce40cf359754d7f47c73
+
+I think both of these are adminable, but it looks actually pretty
+complicated to do. In each case, I think the set is only held by a
+single address, and they could just back out of the position and open
+a new one.
+
+### 0x64dd...5d6d
+
+_component[1] == {RSR address}.
+
+### 0x6690...7c73
+
+_component[2] == {RSR address}.
+
+## ARTHRSRPool
+- 14,144 RSR
+- 0x9ba1ac9bf8bb002bc36966f6135a4c27c9ba08bf
+
+Token interactions here are *not* generic. This is now hard-set to be some sort of Synthetix pool between RSR and another token, and the underlying RSR address cannot be changed.
+
 # No Action Needed: Should Just Work
+
 ## Proxy
 67,278,492 RSR
 
@@ -341,6 +333,12 @@ This instance is a proxy for something handling tokens generically.
 
 No action needed.
 
+## DSProxy
+- 35,800 RSR
+- 0xa90f8f0702319f8f3ff140bd43720459983a3c92
+
+This is basically being used as a token wallet, owned by an active external account.
+
 ## EtherDelta
 - 31,960 RSR
 - 0x8d12a197cb00d4747a1fe03395095ce2a5cc6819
@@ -396,13 +394,31 @@ No action needed; handles tokens generically.
 
 No action needed; this is a generic smart wallet.
 
-# No Action Needed: It's Already Dead
+
+# No Action Needed: RSR Balance is Already Dead
+
+## TokenMintERC20Token
+- 231,662 RSR
+- 0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce
+
+Has many different tokens?
+
+Also, I think this is *just* the Shiba Inu token, and I'm pretty sure it can't do anything with any of these tokens anyway. ??!?
+
+- [x] Actually, I'm pretty confused about this? Why is there this much of a balance here? Double-check that these tokens really are just lost.
+
 
 ## FyoozCoin
 - 100,026 RSR
 - 0x6bff2fe249601ed0db3a87424a2e923118bb0312
 
 Just a token; RSR is only here in error.
+## DINGER
+- 74,134 RSR
+- 0x9e5bd9d9fad182ff0a93ba8085b664bcab00fa68
+
+OK, this is nontrivial, but any RSR here is just stuck.
+
 
 ## OraiToken
 - 32,815 RSR
