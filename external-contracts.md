@@ -3,34 +3,88 @@ The purpose of this file is to record our notes on external accounts that hold R
 
 This Markdown file lists every Ethereum address that:
 - owns 1000 or more RSR
-- had contract source known to Etherscan
+- showed up on Etherscan as a contract (not _all_ with known, verified sources)
 
-I first binned these contracts by name; most deployed contract instances were simply named "Proxy".
+I first binned these contracts by name; most deployed contract instances were simply named "Proxy". Each of the following headings, then, is a unique contract _name_ holding some RSR. There certainly are contract-name collisions (e.g, ReserveRightsToken catches both our current RSR and a *really* old RSR deployment, for instance), but surprisingly few, and usually they're very related.
 
-Each of the following headings, then, is a unique contract _name_ holding some RSR. There certainly are contract-name collisions (e.g, ReserveRightsToken catches both our current RSR and a *really* old RSR deployment, for instance), but surprisingly few, and usually they're very related.
+# Look Again: confused or unsure
+
+- I'm not sure what's going on
+- It's a bridge, the contract should work just fine, but I need to do a deeper dive to figure out if off-chain dependencies will break
+
+## TokenMintERC20Token
+- 231,662 RSR
+- 0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce
+
+Has many different tokens?
+
+Also, I think this is *just* the Shiba Inu token, and I'm pretty sure it can't do anything with any of these tokens anyway. ??!?
+
+- [ ] Actually, I'm pretty confused about this? Why is there this much of a balance here? Double-check that these tokens really are just lost.
+
+## DSProxy
+- 35,800 RSR
+- 0xa90f8f0702319f8f3ff140bd43720459983a3c92
+
+This is basically being used as a token wallet, I think.
+
+- [ ] Check on how this proxy is currently controlled. This could be easy or complicated, depending.
+
+## Wormhole
+- 711,084 RSR
+- 0xf92cd566ea4864356c5491c177a430c222d7e678
+
+Generic bridge, owns many tokens.
+
+- [ ] Where does this go? Offchain things break?
+
+## EternalStorageProxy
+- 435,801 RSR
+- 0x88ad09518695c6c3712ac10a214be5109a655671
+
+Owns many tokens. Seems to be a proxy for a generic bridge contract.
+
+- [ ] Verify no action needed
+
+## ERC20PredicateProxy
+- 370,955 RSR
+- 0x40ec5b33f54e0e8a33a975908c5ba1c14e5bbbdf
+
+Owns many tokens. Seems to be a Polygon bridge contract.
+
+- [ ] Verify no action needed
+
+## Uniswap V1 proxy? (a vyper contract)
+- 2,000-ish RSR
+- 0xeeeec06f48656e921b39e30d9a205cb2b08ea465
+
+Proxy for 0x2157a7894439191e520825fe9399ab8655e0f708
+- [ ] Plan? From a quick look, it's really hard to tell if this RSR isn't just already stuck. I think they are.
+
+## DINGER
+- 74,134 RSR
+- 0x9e5bd9d9fad182ff0a93ba8085b664bcab00fa68
+
+OK, this is some sort of nontrivial token, but it looks like whoever sent RSR here did it in error.
+
+- [ ] Someone else double-check this.
+
+## SetToken
+- 31,355 RSR
+- 0x64ddf354fd42935e0286425001aac7d3c3995d6d
+- 0x66903f7b0f8499fea922ce40cf359754d7f47c73
+
+- [ ] ... Look into this more deeply.
+
+## ARTHRSRPool
+- 14,144 RSR
+- 0x9ba1ac9bf8bb002bc36966f6135a4c27c9ba08bf
+
+- I think this *might* be fine -- looks like token interactions are generic, but I'm still worried.
+  In particular, the contract is named after a token pair, and in fact that pair only holds ARTH and RSR.
 
 
-# Classes of plans so far
-
-- Contracts we control
-    - Sweeping the old RSR contracts
-    - MultiSigWalletWithDailyLimit
-    - TokenVesting
-- On-chain wallets (no special needs)
-- Generic token bridges
-    - The contracts themselves are so far fully generic to the ERC20 tokens they control, but that doesn't mean that whatever's on the other side of the bridge will keep working when we update...
-- Fully-generic fund managers?
-    - the DEGEN token
-- Deployments specific to our token
-    - Bancor/RSR pool
-    - UniswapV2 Pair
-    - The Compound RSR CToken
-
-
-
-# What we'll do with particular contracts
-
-
+# Our Contracts
 ## SlowWallet
 - 49,448,001,323 RSR
 - That's us. Think carefully, but we expect we can just move funds out and into a different slow wallet.
@@ -41,6 +95,98 @@ Each of the following headings, then, is a unique contract _name_ holding some R
 - Also us, and this seems simpler.
 - [ ] What's the plan, exactly?
 
+## ReserveRightsToken
+- 3,814,818 RSR
+- 0x8762db106b2c2a0bccb3a80d1ed41273552616e8
+0x0c226d8dae08cf021f2f03afc2eff5c9c0b24671
+
+This is us, and we resolve these tokens just by sweeping the address.
+
+Remember to sweep the even-older address, too!
+
+## Reserve
+- 91,378 RSR
+- 0x1dcac83e90775b5f4bc2ffac5a5749e25acc610d
+
+Uh. This is RSV, and I *know* it couldn't ever do anything with these tokens.
+
+We _could_ sweep them from here, and do ... something intelligent with them? It's about $2000.
+## TokenVesting
+- 53,923 RSR
+- 0x04ba2992bbad61fb7d125a4daf69ce8c1409e14c
+
+This is *our* token vesting contract. Surprised we've got one in the wild with such little funds in it...
+
+- [ ] Plan! We might even need to redeploy this one and redirect its tokens
+
+
+## Manager
+- 1,386 RSR
+- 0x5ba9d812f5533f7cf2854963f7a9d212f8f28673
+
+- [ ] Sweep from here; this is our own RSV Manager. -_-
+
+# Contracts We Will Break
+## StandardPoolConverter
+- 23,938,026 RSR
+- 0x4a0737d8a87c9ffc31adf85d578339d5c7a5270d
+
+Controls only Bancor (BNT) and RSR.
+
+Might be a problem.
+
+- [ ] Plan.
+
+## UniswapV2Pair
+- 17,418,723 RSR
+- We already know this is a problem.
+
+- [ ] Plan.
+
+## CErc20Immutable
+- 1,415,829 RSR
+- 0xa0998fc7dcf51169d97a74f0b0b7d97e4af8e873
+
+The RSR CToken.
+
+- [ ] Plan
+
+## BPool
+- 295,435 RSR
+- 0x57f604e1be07f2db3e19b58ea00d0005156889d2
+- 0x371a47394006224e38c9da28c17738e4f9a7900e
+- 0x838d504010d83a343db2462256180ca311d29d90
+- 0x918b5d94ec11f889ef5a1fe7df799ddfc3397776
+
+Balancer pools.
+
+Balancer pools contain a direct reference to token addresses as state. It looks like the token address they point to is configurable in-flight. We'll need to reach out to people to keep their pools spinning.
+
+- [ ] Plan
+
+## Curve Gauge Contract for RSR
+(The "contract name" that etherscan knows is just "Vyper_contract")
+
+- 142,054 RSR
+- 0x4dc4a289a8e33600d8bd4cf5f6313e43a37adec7
+
+- [ ] Plan. It looks like the Guage contract can't be directly updated, but an admin can "kill" it?
+
+## VirtualBalanceRewardPool
+- 43,182 RSR
+- 0x94c259dc4c6df248b0b5d23c055cb7574a587d67
+
+This is the Synthetix wrapper for RSR. 
+
+- [ ] Looks like there's no way to update the underlying address, even though this contract has an "operator"
+
+
+## CurveRewards
+- 13,356 RSR
+- 0xad4768f408dd170e62e074188d81a29ae31b8fd8
+
+- [ ] Plan. (Oh no, the RSR contract address is _hardcoded_ in this contract. It'll have to be wound down!)
+# No Action Needed: Should Just Work
 ## Proxy
 67,278,492 RSR
 
@@ -76,22 +222,6 @@ DEGEN token. Fund indexer. Controls many tokens, must allow variable token addre
 
 - [ ] Verify no action needed
 
-## StandardPoolConverter
-- 23,938,026 RSR
-- 0x4a0737d8a87c9ffc31adf85d578339d5c7a5270d
-
-Controls only Bancor (BNT) and RSR.
-
-Might be a problem.
-
-- [ ] Plan.
-
-## UniswapV2Pair
-- 17,418,723 RSR
-- We already know this is a problem.
-
-- [ ] Plan.
-
 ## Exchange
 - 7,690,660 RSR
 - 0x2a0c0DBEcC7E4D658f48E01e3fA353F44050c208
@@ -101,15 +231,6 @@ IDEX.
 Contract owns > 100 tokens and is managed by an owner. Must be generic?
 
 - [ ] Verify no action needed
-
-## ReserveRightsToken
-- 3,814,818 RSR
-- 0x8762db106b2c2a0bccb3a80d1ed41273552616e8
-0x0c226d8dae08cf021f2f03afc2eff5c9c0b24671
-
-This is us, and we resolve these tokens just by sweeping the address.
-
-Remember to sweep the even-older address, too!
 
 ## SplTokenSwap
 - 3,695,824 RSR
@@ -129,14 +250,6 @@ Controls many tokens. Is generic. Is Bridge to some other chain.
 
 - [ ] Verify no action needed
 
-## CErc20Immutable
-- 1,415,829 RSR
-- 0xa0998fc7dcf51169d97a74f0b0b7d97e4af8e873
-
-The RSR CToken.
-
-- [ ] Plan
-
 ## UpgradeBeaconProxyV1
 - 1,036,222 RSR
 - 
@@ -149,14 +262,6 @@ This is a smart wallet; it's almost certainly token-generic, and owns RSR withou
 
 - [ ] Verify no action needed
 
-## Wormhole
-- 711,084 RSR
-- 0xf92cd566ea4864356c5491c177a430c222d7e678
-
-Generic bridge, owns many tokens.
-
-- [ ] Verify no action needed
-
 ## Custodian
 - 489,797 RSR
 - 0xe5c405c5578d84c5231d3a9a29ef4374423fa0c2
@@ -164,35 +269,6 @@ Generic bridge, owns many tokens.
 Owns many tokens, uses token-generic transactions. Looks like some sort of exchange wallet?
 
 - [ ] Verify no action needed
-
-## EternalStorageProxy
-- 435,801 RSR
-- 0x88ad09518695c6c3712ac10a214be5109a655671
-
-Owns many tokens. Seems to be a proxy for a generic bridge contract.
-
-- [ ] Verify no action needed
-
-## ERC20PredicateProxy
-- 370,955 RSR
-- 0x40ec5b33f54e0e8a33a975908c5ba1c14e5bbbdf
-
-Owns many tokens. Seems to be a Polygon bridge contract.
-
-- [ ] Verify no action needed
-
-## BPool
-- 295,435 RSR
-- 0x57f604e1be07f2db3e19b58ea00d0005156889d2
-- 0x371a47394006224e38c9da28c17738e4f9a7900e
-- 0x838d504010d83a343db2462256180ca311d29d90
-- 0x918b5d94ec11f889ef5a1fe7df799ddfc3397776
-
-Balancer pools.
-
-Balancer pools contain a direct reference to token addresses as state. It looks like the token address they point to is configurable in-flight. We'll need to reach out to people to keep their pools spinning.
-
-- [ ] Plan
 
 ## UserWallet
 - 259,845 RSR
@@ -204,16 +280,6 @@ Specific user wallets, for Bittrex I think. Generic across ERC-20s.
 
 No action needed
 
-## TokenMintERC20Token
-- 231,662 RSR
-- 0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce
-
-Has many different tokens?
-
-Also, I think this is *just* the Shiba Inu token, and I'm pretty sure it can't do anything with any of these tokens anyway. ??!?
-
-- [ ] Actually, I'm pretty confused about this? Why is there this much of a balance here?
-
 ## GnosisSafeProxy
 - 154,655 RSR
 - 0x13d91d079129b94f37ac92185f7656d75774ce33
@@ -223,13 +289,6 @@ It's a Gnosis Safe Proxy. Yep.
 
 No action needed.
 
-## Curve Gauge Contract for RSR
-(The "contract name" that etherscan knows is just "Vyper_contract")
-
-- 142,054 RSR
-- 0x4dc4a289a8e33600d8bd4cf5f6313e43a37adec7
-
-- [ ] Plan. It looks like the Guage contract can't be directly updated, but an admin can "kill" it?
 
 ## BrokerV2
 - 132,718 RSR
@@ -256,22 +315,6 @@ No action needed.
 
 No action needed; tokens handled generically.
 
-## FyoozCoin
-- 100,026 RSR
-- 0x6bff2fe249601ed0db3a87424a2e923118bb0312
-
-Just a token; RSR is only here in error.
-
-- [ ] Someone else double-check this
-
-## Reserve
-- 91,378 RSR
-- 0x1dcac83e90775b5f4bc2ffac5a5749e25acc610d
-
-Uh. This is RSV, and I *know* it couldn't ever do anything with these tokens.
-
-We _could_ sweep them from here, and do ... something intelligent with them? It's about $2000.
-
 ## GPv2Settlement
 - 84,267 RSR
 - 0x9008d19f58aabd9ed0d60971565aa8510560ab41
@@ -282,14 +325,6 @@ Controls many tokens; I assume it can handle them generically.
 
 No action needed.
 
-## DINGER
-- 74,134 RSR
-- 0x9e5bd9d9fad182ff0a93ba8085b664bcab00fa68
-
-OK, this is some sort of nontrivial token, but it looks like whoever sent RSR here did it in error.
-
-- [ ] Someone else double-check this.
-
 ## UniBrightToken
 - 58,437 RSR
 - 0x8400d94a5cb0fa0d041a3788e395285d61c9ee5e
@@ -297,14 +332,6 @@ OK, this is some sort of nontrivial token, but it looks like whoever sent RSR he
 I suspect this is some mechanism that does generic token handling, but it's really not obvious.
 
 - [ ] I _think_ no action is needed here, but someone else should maybe double-check on that.
-
-## TokenVesting
-- 53,923 RSR
-- 0x04ba2992bbad61fb7d125a4daf69ce8c1409e14c
-
-This is *our* token vesting contract. Surprised we've got one in the wild with such little funds in it...
-
-- [ ] Plan! We might even need to redeploy this one and redirect its tokens
 
 ## TransparentUpgradeableProxy
 - 44,907 RSR
@@ -314,59 +341,17 @@ This instance is a proxy for something handling tokens generically.
 
 No action needed.
 
-## VirtualBalanceRewardPool
-- 43,182 RSR
-- 0x94c259dc4c6df248b0b5d23c055cb7574a587d67
-
-This is the Synthetix wrapper for RSR. 
-
-- [ ] Looks like there's no way to update the underlying address, even though this contract has an "operator"
-
-## DSProxy
-- 35,800 RSR
-- 0xa90f8f0702319f8f3ff140bd43720459983a3c92
-
-This is basically being used as a token wallet, I think.
-
-- [ ] Check on how this proxy is currently controlled. This could be easy or complicated, depending.
-
-## OraiToken
-- 32,815 RSR
-- 0x4c11249814f11b9346808179cf06e71ac328c1b5
-
-Dead balance, no action needed.
-
 ## EtherDelta
 - 31,960 RSR
 - 0x8d12a197cb00d4747a1fe03395095ce2a5cc6819
 
 No action needed; this is a DEX contract handling tokens generically.
 
-## SetToken
-- 31,355 RSR
-- 0x64ddf354fd42935e0286425001aac7d3c3995d6d
-- 0x66903f7b0f8499fea922ce40cf359754d7f47c73
-
-- [ ] ... Look into this more deeply.
-
 ## Crucible
 - 17,827 RSR
 - 0x1e2536dff1fa2284b6c992c4e5c56de418e04e54
 
-- [ ] I think this is fine -- looks generic and adminable. Check more closely, though.
-
-## ARTHRSRPool
-- 14,144 RSR
-- 0x9ba1ac9bf8bb002bc36966f6135a4c27c9ba08bf
-
-- [ ] I think this *might* be fine -- looks like token interactions are generic, but I'm still worried.
-      In particular, the contract is named after a token pair, and in fact that pair only holds ARTH and RSR.
-
-## CurveRewards
-- 13,356 RSR
-- 0xad4768f408dd170e62e074188d81a29ae31b8fd8
-
-- [ ] Plan. (Oh no, the RSR contract address is _hardcoded_ in this contract. It'll have to be wound down!)
+- I think this is fine -- looks generic and adminable. Check more closely, though.
 
 ## DefaultDepositContract
 - 12,003 RSR
@@ -386,11 +371,6 @@ No action needed. Generic smart wallet.
 
 No action needed. Generic token handler.
 
-## lcxToken
-- 5,000 RSR
-- 0x037a54aab062628c9bbae1fdb1583c195585fe41
-
-No action needed; these tokens are already stuck.
 
 ## UpgradeabilityProxy
 - 4,683 RSR
@@ -404,11 +384,45 @@ No action. Generic wallet
 
 No action; generic token handler.
 
+## TokenHolder
+- 1,766 RSR
+- 0xebcc959479634eec5a4d7162e36f8b8cc763f491
+
+No action needed; handles tokens generically.
+
+## AccountProxy
+- 1,411 RSR
+- 0x12ed1035a37650f65c69fe493d93272eb123d1f9
+
+No action needed; this is a generic smart wallet.
+
+# No Action Needed: It's Already Dead
+
+## FyoozCoin
+- 100,026 RSR
+- 0x6bff2fe249601ed0db3a87424a2e923118bb0312
+
+Just a token; RSR is only here in error.
+
+## OraiToken
+- 32,815 RSR
+- 0x4c11249814f11b9346808179cf06e71ac328c1b5
+
+Dead balance, no action needed.
+
+
+## lcxToken
+- 5,000 RSR
+- 0x037a54aab062628c9bbae1fdb1583c195585fe41
+
+No action needed; these tokens are already stuck.
+
 ## Telcoin
 - 2,749 RSR
 - 0x467bccd9d29f223bce8043b84e8c8b282827790f
 
 No action; these tokens are already stuck.
+
 
 ## BZRXToken
 - 2,400 RSR
@@ -416,36 +430,12 @@ No action; these tokens are already stuck.
 
 No action; these tokens are already stuck.
 
-## Uniswap V1 proxy? (a vyper contract)
-- 2,000-ish RSR
-- 0xeeeec06f48656e921b39e30d9a205cb2b08ea465
-
-Proxy for 0x2157a7894439191e520825fe9399ab8655e0f708
-- [ ] Plan? From a quick look, it's really hard to tell if this RSR isn't just already stuck. I think they are.
-
-## TokenHolder
-- 1,766 RSR
-- 0xebcc959479634eec5a4d7162e36f8b8cc763f491
-
-No action needed; handles tokens generically.
-
 ## RepublicToken
 - 1,488 RSR
 - 0x408e41876cccdc0f92210600ef50372656052a38
 
 No action needed; the RSR here is stuck.
 
-## AccountProxy
-- 1,411 RSR
-- 0x12ed1035a37650f65c69fe493d93272eb123d1f9
-
-No action needed; this is a generic smarl wallet.
-
-## Manager
-- 1,386 RSR
-- 0x5ba9d812f5533f7cf2854963f7a9d212f8f28673
-
-- [ ] Sweep from here; this is our own RSV Manager. -_-
 
 ## ZapToken
 - 1,000 RSR
@@ -458,5 +448,3 @@ No action needed; the RSR here is stuck.
 - 0x0e29e5abbb5fd88e28b2d355774e73bd47de3bcd
 
 No action needed; the RSR here is stuck.
-
-
