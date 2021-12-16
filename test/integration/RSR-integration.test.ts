@@ -120,7 +120,6 @@ describe('RSR contract - Mainnet Forking', function () {
       // Renounce ownership of new RSR
       await rsrToken.connect(owner).renounceOwnership()
 
-      expect(await prevRSR.paused()).to.equal(true)
       totalSupply = await rsrToken.totalSupply()
     })
 
