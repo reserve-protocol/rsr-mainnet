@@ -129,7 +129,6 @@ contract RSR is Ownable, ERC20Permit {
         address to,
         uint16 weight
     ) external onlyOwner {
-        require(!oldRSR.paused(), "old RSR is already paused");
         _siphon(old, prev, to, weight);
     }
 
