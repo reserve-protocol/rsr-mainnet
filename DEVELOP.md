@@ -14,16 +14,19 @@ To run the entire compilation and testing environment, you'll need to set up all
 
 These instructions assume you already have standard installations of `node`, `npm`, and `python3`.
 
-## Basic Setup 
+## Basic Setup
 
-This will do set up yarn and hardhat, needed for compiling and running basic tests
+Set up yarn and hardhat, so you can compile and run basic tests:
 
 ```bash
 yarn install
 yarn prepare
 cp .env.example .env
-# Get Alchemy API keys from private communications with our team, and fill them into .env
 ```
+
+Get Alchemy API keys and fill them into .env. (Team members can use the Reserve keys; ask another team member over Signal.)
+
+All of `yarn compile`, `yarn test`, and `yarn devchain` do sensible things.
 
 ## Setup Trail of Bits Tools
 
@@ -45,4 +48,11 @@ Once `solc-select` is set up, install slither with:
 pip3 install -U slither-analyzer  # -U for upgrade, in case you've installed an old version.
 ```
 
-At this point, `slither` will be usable in your environment. A reasonable slither check will happen if you run `yarn slither`; for advanced usage and warning triage, deal with slither directly.
+At this point, `slither` will be usable in your environment.
+
+- A reasonable slither check will happen if you run `yarn slither`.
+- Use slither's [triage mode][] with `yarn slither --triage`.
+- For advanced usage and warning triage, deal with slither [directly][slither usage].
+
+[triage mode]: https://github.com/crytic/slither/wiki/Usage#triage-mode-1
+[slither usage]: https://github.com/crytic/slither/wiki/Usage
