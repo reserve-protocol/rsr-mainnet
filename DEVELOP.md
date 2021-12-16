@@ -56,3 +56,13 @@ At this point, `slither` will be usable in your environment.
 
 [triage mode]: https://github.com/crytic/slither/wiki/Usage#triage-mode-1
 [slither usage]: https://github.com/crytic/slither/wiki/Usage
+
+## Mainnet Forking
+
+The tests located in `test/mainnet-forking` will require the Mainnet Forking setup in place. This is done by setting the `MAINNET_FORK_RPC_URL` variable in your local `.env`. An Alchemy node is recommended for Mainnet Forking to properly work. Additional information can be found [here](https://hardhat.org/hardhat-network/guides/mainnet-forking.html).
+
+For running scripts and tasks using Mainnet Forking a `FORK` environment variable can be defined. For example to run a local node using Mainnet forking you can run:
+
+```bash
+FORK=true npx hardhat node
+```
