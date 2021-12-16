@@ -5,10 +5,10 @@ import { BigNumber } from 'ethers'
 import { ethers } from 'hardhat'
 import hre from 'hardhat'
 import { impersonate } from './utils/accounts'
-import { MultiSigWalletWithDailyLimit } from '../../typechain/MultiSigWalletWithDailyLimit.d'
+import { MultiSigWalletWithDailyLimit } from '../../typechain/MultiSigWalletWithDailyLimit'
 import { ReserveRightsToken } from '../../typechain/ReserveRightsToken'
 import { RSR } from '../../typechain/RSR'
-import { SlowWallet } from '../../typechain/SlowWallet.d'
+import { SlowWallet } from '../../typechain/SlowWallet'
 
 // Relevant addresses (Mainnet)
 const RSR_PREVIOUS_ADDRESS = '0x8762db106b2c2a0bccb3a80d1ed41273552616e8'
@@ -38,7 +38,7 @@ describe('RSR contract - Mainnet Forking', function () {
       params: [
         {
           forking: {
-            jsonRpcUrl: process.env.MAINNET_FORK_RPC_URL,
+            jsonRpcUrl: process.env.MAINNET_RPC_URL,
             blockNumber: 13810440,
           },
         },
