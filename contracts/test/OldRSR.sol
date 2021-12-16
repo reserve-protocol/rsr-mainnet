@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: BlueOak-1.0.0
 /**
  * This file is a copy of the verified code for PreRSR.
  * It's important to use this code to mock old RSR because a lot has changed
