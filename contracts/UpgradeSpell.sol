@@ -3,7 +3,7 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./RSR.sol";
-import "./ISpell.sol";
+import "./Spell.sol";
 
 interface IPausable {
     function pause() external;
@@ -15,24 +15,14 @@ interface IPausable {
  *
  * This contract must be the pauser of `oldRSR` and regent of `rsr`
  */
-contract UpgradeSpell is ISpell {
+contract UpgradeSpell is Spell {
     IPausable public immutable oldRSR;
-    RSR public immutable rsr;
 
-    /// Invariant
-    /// Once set to true, remains true
-    bool public spent;
-
-    constructor(IPausable oldRSR_, RSR rsr_) {
+    constructor(IPausable oldRSR_, RSR rsr_) Spell(rsr_) {
         oldRSR = oldRSR_;
-        rsr = rsr_;
     }
 
-    function cast() external override {
-        require(!spent, "the upgrade spell is spent");
-        require(msg.sender == address(rsr), "rsr only");
-
-        spent = true;
+    function cast() external override onlyRSR onceOnly {
         oldRSR.pause();
         rsr.renounceOwnership();
     }
