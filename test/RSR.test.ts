@@ -4,7 +4,7 @@ import { expect } from 'chai'
 import { BigNumberish, ContractFactory } from 'ethers'
 import { ethers } from 'hardhat'
 
-import { ONE, ZERO } from '../common/numbers'
+import { bn, ONE, ZERO } from '../common/numbers'
 import { ERC20Mock, ReserveRightsTokenMock, RSR, SiphonSpell, UpgradeSpell } from '../typechain'
 
 let owner: SignerWithAddress
@@ -68,6 +68,19 @@ describe('RSR contract', () => {
       await setInitialBalances()
     })
 
+    it('dont allow siphon if oldRSR is paused', async () => {
+      await oldRSR.connect(owner).pause()
+      await expect(
+        rsr.connect(owner).siphon(ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, WEIGHT_ONE)
+      ).to.be.revertedWith('old RSR is already paused')
+    })
+
+    it('dont allow siphon if from is the zero address', async () => {
+      await expect(
+        rsr.connect(owner).siphon(ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, WEIGHT_ONE)
+      ).to.be.revertedWith('from cannot be zero address')
+    })
+
     it('cannot change weight if the account is not the owner', async () => {
       await expect(
         rsr.connect(addr1).siphon(ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, WEIGHT_ONE)
@@ -82,9 +95,12 @@ describe('RSR contract', () => {
       await expect(rsr.connect(owner).changeBalanceAtZeroAddress(ONE))
         .to.emit(rsr, 'Transfer')
         .withArgs(ZERO_ADDRESS, ONE_ADDRESS, ONE)
-      await expect(rsr.connect(owner).changeBalanceAtZeroAddress(-1))
+      await expect(rsr.connect(owner).changeBalanceAtZeroAddress(bn('-1e18').div(2)))
         .to.emit(rsr, 'Transfer')
-        .withArgs(ONE_ADDRESS, ZERO_ADDRESS, 1)
+        .withArgs(ONE_ADDRESS, ZERO_ADDRESS, ONE.div(2))
+      // do nothing if amount is zero (coverage purposes)
+      await expect(rsr.connect(owner).changeBalanceAtZeroAddress(ZERO)).to.not.emit(rsr, 'Transfer')
+      expect(await rsr.balanceOf(ONE_ADDRESS)).to.eq(ONE.div(2))
     })
 
     it('should not allow RSR transfers or approvals until oldRSR is paused', async () => {
@@ -173,6 +189,11 @@ describe('RSR contract', () => {
         await UpgradeSpellFactory.deploy(oldRSR.address, rsr.address)
       )
       await expect(rsr.connect(owner).castSpell(newUpgradeSpell.address)).to.be.reverted
+    })
+
+    it('The transition is only complete if RSR dont have an owner', async () => {
+      await oldRSR.connect(owner).pause()
+      await expect(rsr.connect(owner).transfer(addr1.address, ONE)).to.be.reverted
     })
 
     it('should only upgrade once', async () => {
@@ -270,6 +291,8 @@ describe('RSR contract', () => {
       expect(await rsr.allowance(owner.address, addr3.address)).to.equal(ONE.mul(2))
       expect(await rsr.allowance(owner.address, addr2.address)).to.equal(ZERO)
       expect(await oldRSR.allowance(owner.address, addr3.address)).to.equal(ONE)
+      // Allowances are already crossed (coverage)
+      await rsr.connect(owner).increaseAllowance(addr3.address, ONE)
     })
 
     it('should cross balance for sender account without changing the weights', async () => {
@@ -284,16 +307,23 @@ describe('RSR contract', () => {
       expect(await rsr.balCrossed(addr2.address)).to.equal(false)
       expect(await rsr.weights(addr2.address, addr2.address)).to.equal(0)
       expect(await rsr.hasWeights(addr2.address)).to.equal(false)
+      // should transfer normally with no changes
+      await expect(rsr.connect(addr1).transfer(addr2.address, ONE)).to.be.not.reverted
     })
 
-    // it('should cross balances and allowance when using "transferFrom"', async () => {
-    //   expect(await rsr.balCrossed(owner.address)).to.equal(false)
-    //   expect(await rsr.allowanceCrossed(owner.address, addr2.address)).to.equal(false)
-    //   expect(await oldRSR.allowance(owner.address, addr2.address)).to.equal(ONE)
+    it('should cross balances and allowance when using "transferFrom"', async () => {
+      expect(await rsr.balCrossed(owner.address)).to.equal(false)
+      expect(await rsr.allowanceCrossed(owner.address, addr2.address)).to.equal(false)
+      expect(await oldRSR.allowance(owner.address, addr2.address)).to.equal(ONE)
 
-    //   await rsr.connect(owner).transferFrom(owner.address, addr2.address, ONE.div(2))
-    //   expect(await rsr.balCrossed(owner.address)).to.equal(true)
-    //   expect(await rsr.allowanceCrossed(addr1.address, addr2.address)).to.equal(true)
-    // })
+      await rsr.connect(owner).approve(addr1.address, ONE)
+      await rsr.connect(addr1).transferFrom(owner.address, addr2.address, ONE.div(2))
+      expect(await rsr.balCrossed(owner.address)).to.equal(true)
+      expect(await rsr.allowanceCrossed(owner.address, addr2.address)).to.equal(true)
+    })
+
+    it('should not allow token transfer to this address', async () => {
+      await expect(rsr.connect(owner).transfer(rsr.address, ONE)).to.be.reverted
+    })
   })
 })
