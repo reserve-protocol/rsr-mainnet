@@ -34,7 +34,7 @@ jobs:
         run: yarn compile
 
       - name: Run linting
-        run: npx solhint 'contracts/*.sol'
+        run: npx solhint 'contracts/**.sol'
 
       - name: Run unit tests
         run: npx hardhat test
