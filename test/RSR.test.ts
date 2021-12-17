@@ -286,13 +286,14 @@ describe('RSR contract', () => {
       expect(await rsr.hasWeights(addr2.address)).to.equal(false)
     })
 
-    it('should cross balances and allowance when using "transferFrom"', async () => {
-      expect(await rsr.balCrossed(owner.address)).to.equal(false)
-      expect(await rsr.allowanceCrossed(owner.address, addr2.address)).to.equal(false)
+    // it('should cross balances and allowance when using "transferFrom"', async () => {
+    //   expect(await rsr.balCrossed(owner.address)).to.equal(false)
+    //   expect(await rsr.allowanceCrossed(owner.address, addr2.address)).to.equal(false)
+    //   expect(await oldRSR.allowance(owner.address, addr2.address)).to.equal(ONE)
 
-      await rsr.connect(owner).transferFrom(owner.address, addr2.address, ONE.div(2))
-      expect(await rsr.balCrossed(owner.address)).to.equal(true)
-      expect(await rsr.allowanceCrossed(addr1.address, addr2.address)).to.equal(true)
-    })
+    //   await rsr.connect(owner).transferFrom(owner.address, addr2.address, ONE.div(2))
+    //   expect(await rsr.balCrossed(owner.address)).to.equal(true)
+    //   expect(await rsr.allowanceCrossed(addr1.address, addr2.address)).to.equal(true)
+    // })
   })
 })
