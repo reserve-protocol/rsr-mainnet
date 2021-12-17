@@ -34,7 +34,7 @@ async function castSiphon(from: string, to: string, weight: BigNumberish) {
   await rsr.connect(owner).castSpell(siphonSpell.address)
 }
 
-describe.only('RSR contract', () => {
+describe('RSR contract', () => {
   beforeEach(async function () {
     ;[owner, addr1, addr2, addr3] = await ethers.getSigners()
 
