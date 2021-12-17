@@ -140,7 +140,7 @@ describe('RSR contract', () => {
       )
     })
 
-    it('should cast siphon without change', async () => {
+    it.only('should cast siphon without change', async () => {
       await castSiphons({ from: addr1.address, to: addr1.address, weight: 0 })
       expect(await rsr.regent()).to.equal(ZERO_ADDRESS)
       expect(await rsr.owner()).to.equal(owner.address)

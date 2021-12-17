@@ -22,8 +22,8 @@ contract SiphonSpell is Spell {
 
     /// Invariant
     /// for addr in addrs: sum(siphons[addr]) = 1000
-    EnumerableSet.AddressSet private addrs;
     mapping(address => Siphon[]) public siphons;
+    EnumerableSet.AddressSet internal addrs;
 
     constructor(RSR rsr_) Spell(rsr_) {
         address sink = 0x0000000000000000000000000000000000000003; // random address
