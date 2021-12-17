@@ -61,7 +61,7 @@ describe.only('RSR contract', () => {
     })
   })
 
-  describe('Transitory state', () => {
+  describe('Prior to the upgrade', () => {
     beforeEach(async () => {
       await setInitialBalances()
     })
@@ -94,45 +94,45 @@ describe.only('RSR contract', () => {
       )
     })
 
-    it('should transition via a spell', async () => {
+    it('should cast siphon without change', async () => {
       await castSiphon(addr1.address, addr1.address, 0)
       expect(await rsr.regent()).to.equal(ZERO_ADDRESS)
       expect(await rsr.owner()).to.equal(owner.address)
     })
-  })
 
-  it('should change the account weight', async () => {
-    await castSiphon(addr1.address, addr1.address, WEIGHT_ONE)
-    expect(await rsr.balCrossed(addr1.address)).to.equal(false)
-    expect(await rsr.weights(addr1.address, addr1.address)).to.equal(WEIGHT_ONE)
-    expect(await rsr.hasWeights(addr1.address)).to.equal(true)
-  })
+    it('should cast siphon with change', async () => {
+      await castSiphon(addr1.address, addr1.address, WEIGHT_ONE)
+      expect(await rsr.balCrossed(addr1.address)).to.equal(false)
+      expect(await rsr.weights(addr1.address, addr1.address)).to.equal(WEIGHT_ONE)
+      expect(await rsr.hasWeights(addr1.address)).to.equal(true)
+    })
 
-  it('should distribute the weights correctly for the given account', async () => {
-    expect(await rsr.hasWeights(addr1.address)).to.equal(false)
-    expect(await rsr.hasWeights(addr2.address)).to.equal(false)
-    expect(await rsr.hasWeights(addr3.address)).to.equal(false)
-    await castSiphon(addr1.address, addr2.address, WEIGHT_ONE / 2)
+    it('should distribute the weights correctly for the given account', async () => {
+      expect(await rsr.hasWeights(addr1.address)).to.equal(false)
+      expect(await rsr.hasWeights(addr2.address)).to.equal(false)
+      expect(await rsr.hasWeights(addr3.address)).to.equal(false)
+      await castSiphon(addr1.address, addr2.address, WEIGHT_ONE / 2)
 
-    expect(await rsr.weights(addr1.address, addr1.address)).to.equal(WEIGHT_ONE / 2)
-    expect(await rsr.weights(addr1.address, addr2.address)).to.equal(WEIGHT_ONE / 2)
+      expect(await rsr.weights(addr1.address, addr1.address)).to.equal(WEIGHT_ONE / 2)
+      expect(await rsr.weights(addr1.address, addr2.address)).to.equal(WEIGHT_ONE / 2)
 
-    await castSiphon(addr1.address, addr3.address, WEIGHT_ONE / 4)
+      await castSiphon(addr1.address, addr3.address, WEIGHT_ONE / 4)
 
-    expect(await rsr.weights(addr1.address, addr1.address)).to.equal(WEIGHT_ONE / 4)
-    expect(await rsr.weights(addr1.address, addr3.address)).to.equal(WEIGHT_ONE / 4)
-    expect(await rsr.weights(addr1.address, addr2.address)).to.equal(WEIGHT_ONE / 2)
-    expect(await rsr.hasWeights(addr1.address)).to.equal(true)
-    // Only move sender weight not recipient
-    expect(await rsr.hasWeights(addr2.address)).to.equal(false)
-    expect(await rsr.hasWeights(addr3.address)).to.equal(false)
-  })
+      expect(await rsr.weights(addr1.address, addr1.address)).to.equal(WEIGHT_ONE / 4)
+      expect(await rsr.weights(addr1.address, addr3.address)).to.equal(WEIGHT_ONE / 4)
+      expect(await rsr.weights(addr1.address, addr2.address)).to.equal(WEIGHT_ONE / 2)
+      expect(await rsr.hasWeights(addr1.address)).to.equal(true)
+      // Only move sender weight not recipient
+      expect(await rsr.hasWeights(addr2.address)).to.equal(false)
+      expect(await rsr.hasWeights(addr3.address)).to.equal(false)
+    })
 
-  it('should not distribute more weight than the current account has', async () => {
-    await rsr.connect(owner).siphon(addr1.address, addr1.address, addr2.address, WEIGHT_ONE / 2)
-    await expect(
-      rsr.connect(owner).siphon(addr1.address, addr1.address, addr2.address, WEIGHT_ONE)
-    ).to.be.revertedWith('weight too big')
+    it('should not distribute more weight than the current account has', async () => {
+      await rsr.connect(owner).siphon(addr1.address, addr1.address, addr2.address, WEIGHT_ONE / 2)
+      await expect(
+        rsr.connect(owner).siphon(addr1.address, addr1.address, addr2.address, WEIGHT_ONE)
+      ).to.be.revertedWith('weight too big')
+    })
   })
 
   describe('The Upgrade', () => {
@@ -172,7 +172,7 @@ describe.only('RSR contract', () => {
     })
   })
 
-  describe('After RSR Upgrade is complete (default settings)', () => {
+  describe('After The Upgrade (default settings)', () => {
     beforeEach(async () => {
       await setInitialBalances()
       await rsr.connect(owner).castSpell(upgradeSpell.address)
