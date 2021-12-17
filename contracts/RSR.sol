@@ -135,6 +135,11 @@ contract RSR is RegentMixin, ERC20Permit {
         _siphon(from, oldTo, newTo, weight);
     }
 
+    /// Renounces all ownership of RSR, callable by the Regent / Owner
+    function renounceOwnership() public override onlyAdmin {
+        _transferOwnership(address(0));
+    }
+
     /// Grants regent to an ISpell, casts the spell, and restore regent
     function castSpell(ISpell spell) external onlyOwner {
         _grantRegent(address(spell));

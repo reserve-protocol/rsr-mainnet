@@ -4,7 +4,7 @@ import { BigNumberish, ContractFactory } from 'ethers'
 import { ethers } from 'hardhat'
 
 import { ONE, ZERO } from '../common/numbers'
-import { ERC20Mock, ReserveRightsTokenMock, RSR, SiphonSpell } from '../typechain'
+import { ERC20Mock, ReserveRightsTokenMock, RSR, SiphonSpell, UpgradeSpell } from '../typechain'
 
 // eslint-disable-next-line node/no-missing-import
 let owner: SignerWithAddress
@@ -13,6 +13,8 @@ let addr2: SignerWithAddress
 let addr3: SignerWithAddress
 let oldRSR: ReserveRightsTokenMock
 let SiphonSpellFactory: ContractFactory
+let UpgradeSpellFactory: ContractFactory
+let upgradeSpell: UpgradeSpell
 let rsr: RSR
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 const WEIGHT_ONE = 1000
@@ -23,11 +25,7 @@ async function setInitialBalances() {
   await oldRSR.mint(addr2.address, ONE.mul(3))
 }
 
-async function pauseOldRSR() {
-  await oldRSR.connect(owner).pause()
-  await rsr.renounceOwnership()
-}
-async function castSiphonSpell(from: string, to: string, weight: BigNumberish) {
+async function castSiphon(from: string, to: string, weight: BigNumberish) {
   const siphonSpell = <SiphonSpell>(
     await SiphonSpellFactory.connect(owner).deploy(rsr.address, owner.address)
   )
@@ -38,6 +36,7 @@ async function castSiphonSpell(from: string, to: string, weight: BigNumberish) {
 describe('RSR contract', () => {
   beforeEach(async function () {
     ;[owner, addr1, addr2, addr3] = await ethers.getSigners()
+
     // Deploy ERC20Mock to stand-in for oldOldRSR
     const OldOldRSR = await ethers.getContractFactory('ERC20Mock')
     const oldOldRSR = <ERC20Mock>await OldOldRSR.deploy('Reserve Rights', 'RSR')
@@ -47,7 +46,11 @@ describe('RSR contract', () => {
     // Deploy new RSR
     const RSR = await ethers.getContractFactory('RSR')
     rsr = <RSR>await RSR.connect(owner).deploy(oldRSR.address)
+    // Spells
     SiphonSpellFactory = await ethers.getContractFactory('SiphonSpell')
+    UpgradeSpellFactory = await ethers.getContractFactory('UpgradeSpell')
+    upgradeSpell = <UpgradeSpell>await UpgradeSpellFactory.deploy(oldRSR.address, rsr.address)
+    oldRSR.connect(owner).addPauser(upgradeSpell.address)
   })
 
   describe('Deployment', () => {
@@ -57,7 +60,7 @@ describe('RSR contract', () => {
     })
   })
 
-  describe('Transition state', () => {
+  describe('Transitory state', () => {
     beforeEach(async () => {
       await setInitialBalances()
     })
@@ -69,14 +72,14 @@ describe('RSR contract', () => {
     })
 
     it('should transition via a spell', async () => {
-      await castSiphonSpell(addr1.address, addr1.address, 0)
+      await castSiphon(addr1.address, addr1.address, 0)
       expect(await rsr.regent()).to.equal(ZERO_ADDRESS)
       expect(await rsr.owner()).to.equal(owner.address)
     })
   })
 
   it('should change the account weight', async () => {
-    await castSiphonSpell(addr1.address, addr1.address, WEIGHT_ONE)
+    await castSiphon(addr1.address, addr1.address, WEIGHT_ONE)
     expect(await rsr.balCrossed(addr1.address)).to.equal(false)
     expect(await rsr.weights(addr1.address, addr1.address)).to.equal(WEIGHT_ONE)
     expect(await rsr.hasWeights(addr1.address)).to.equal(true)
@@ -86,12 +89,12 @@ describe('RSR contract', () => {
     expect(await rsr.hasWeights(addr1.address)).to.equal(false)
     expect(await rsr.hasWeights(addr2.address)).to.equal(false)
     expect(await rsr.hasWeights(addr3.address)).to.equal(false)
-    await castSiphonSpell(addr1.address, addr2.address, WEIGHT_ONE / 2)
+    await castSiphon(addr1.address, addr2.address, WEIGHT_ONE / 2)
 
     expect(await rsr.weights(addr1.address, addr1.address)).to.equal(WEIGHT_ONE / 2)
     expect(await rsr.weights(addr1.address, addr2.address)).to.equal(WEIGHT_ONE / 2)
 
-    await castSiphonSpell(addr1.address, addr3.address, WEIGHT_ONE / 4)
+    await castSiphon(addr1.address, addr3.address, WEIGHT_ONE / 4)
 
     expect(await rsr.weights(addr1.address, addr1.address)).to.equal(WEIGHT_ONE / 4)
     expect(await rsr.weights(addr1.address, addr3.address)).to.equal(WEIGHT_ONE / 4)
@@ -109,10 +112,38 @@ describe('RSR contract', () => {
     ).to.be.revertedWith('weight too big')
   })
 
-  describe('After RSR Transition (void state)', () => {
+  describe('The Upgrade', () => {
     beforeEach(async () => {
       await setInitialBalances()
-      await pauseOldRSR()
+    })
+
+    it('does the upgrade', async () => {
+      await rsr.connect(owner).castSpell(upgradeSpell.address)
+    })
+
+    it('reverts if not pauser of oldRSR', async () => {
+      const newUpgradeSpell = <UpgradeSpell>(
+        await UpgradeSpellFactory.deploy(oldRSR.address, rsr.address)
+      )
+      await expect(rsr.connect(owner).castSpell(newUpgradeSpell.address)).to.be.reverted
+    })
+
+    it('should only upgrade once', async () => {
+      await rsr.connect(owner).castSpell(upgradeSpell.address)
+      await expect(rsr.connect(owner).castSpell(upgradeSpell.address)).to.be.reverted
+
+      const newUpgradeSpell = <UpgradeSpell>(
+        await UpgradeSpellFactory.deploy(oldRSR.address, rsr.address)
+      )
+      await oldRSR.addPauser(newUpgradeSpell.address)
+      await expect(rsr.connect(owner).castSpell(newUpgradeSpell.address)).to.be.reverted
+    })
+  })
+
+  describe('After RSR Upgrade is complete (default settings)', () => {
+    beforeEach(async () => {
+      await setInitialBalances()
+      await rsr.connect(owner).castSpell(upgradeSpell.address)
     })
 
     it('cannot change weight after RSR Transition', async () => {
