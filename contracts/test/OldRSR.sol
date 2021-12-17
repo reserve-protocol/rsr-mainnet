@@ -7,7 +7,7 @@
  * Etherscan verified on 2019-05-17
  */
 
-pragma solidity ^0.4.24;
+pragma solidity 0.4.24;
 
 /**
  * @title ERC20 interface
