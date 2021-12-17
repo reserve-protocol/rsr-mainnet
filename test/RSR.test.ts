@@ -1,4 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
+import { signERC2612Permit } from 'eth-permit'
 import { expect } from 'chai'
 import { BigNumberish, ContractFactory } from 'ethers'
 import { ethers } from 'hardhat'
@@ -16,6 +17,7 @@ let UpgradeSpellFactory: ContractFactory
 let upgradeSpell: UpgradeSpell
 let rsr: RSR
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
+const ONE_ADDRESS = '0x0000000000000000000000000000000000000001'
 const WEIGHT_ONE = 1000
 
 async function setInitialBalances() {
@@ -72,7 +74,28 @@ describe('RSR contract', () => {
       ).to.be.revertedWith('only regent or owner')
     })
 
+    it('should allow changing balance at zero address (owner only)', async () => {
+      await expect(rsr.connect(addr1).changeBalanceAtZeroAddress(ONE)).to.be.revertedWith(
+        'Ownable: caller is not the owner'
+      )
+
+      await expect(rsr.connect(owner).changeBalanceAtZeroAddress(ONE))
+        .to.emit(rsr, 'Transfer')
+        .withArgs(ZERO_ADDRESS, ONE_ADDRESS, ONE)
+      await expect(rsr.connect(owner).changeBalanceAtZeroAddress(-1))
+        .to.emit(rsr, 'Transfer')
+        .withArgs(ONE_ADDRESS, ZERO_ADDRESS, 1)
+    })
+
     it('should not allow RSR transfers or approvals until oldRSR is paused', async () => {
+      const permit = await signERC2612Permit(
+        ethers.provider,
+        rsr.address,
+        owner.address,
+        addr1.address,
+        '0'
+      )
+
       await expect(rsr.connect(owner).transfer(addr1.address, 0)).to.be.revertedWith(
         'waiting for oldRSR to pause'
       )
@@ -82,10 +105,11 @@ describe('RSR contract', () => {
       await expect(rsr.connect(owner).approve(addr1.address, 0)).to.be.revertedWith(
         'waiting for oldRSR to pause'
       )
-      // TODO: Missing values for the bytes32 params
-      // await expect(
-      //   rsr.connect(owner).permit(owner.address, addr1.address, 0, 0, 0, ZERO_ADDRESS, ZERO_ADDRESS)
-      // ).to.be.revertedWith('waiting for oldRSR to pause')
+      await expect(
+        rsr
+          .connect(owner)
+          .permit(owner.address, addr1.address, '0', permit.deadline, permit.v, permit.r, permit.s)
+      ).to.be.revertedWith('waiting for oldRSR to pause')
       await expect(rsr.connect(owner).increaseAllowance(addr1.address, 0)).to.be.revertedWith(
         'waiting for oldRSR to pause'
       )
@@ -205,6 +229,30 @@ describe('RSR contract', () => {
       expect(await rsr.balCrossed(addr2.address)).to.equal(false)
     })
 
+    it('It should mark allowance crossed when using "permit"', async () => {
+      expect(await rsr.allowanceCrossed(owner.address, addr1.address)).to.equal(false)
+      const permit = await signERC2612Permit(
+        ethers.provider,
+        rsr.address,
+        owner.address,
+        addr1.address,
+        ONE.toString()
+      )
+
+      await rsr.permit(
+        owner.address,
+        addr1.address,
+        ONE,
+        permit.deadline,
+        permit.v,
+        permit.r,
+        permit.s
+      )
+
+      expect(await rsr.allowanceCrossed(owner.address, addr1.address)).to.equal(true)
+      expect(await rsr.allowance(owner.address, addr1.address)).to.equal(ONE)
+    })
+
     it('should cross RSR allowance from oldRSR when increasing/decreasing or approving', async () => {
       expect(await rsr.allowanceCrossed(owner.address, addr3.address)).to.equal(false)
       expect(await rsr.allowanceCrossed(owner.address, addr2.address)).to.equal(false)
@@ -236,6 +284,15 @@ describe('RSR contract', () => {
       expect(await rsr.balCrossed(addr2.address)).to.equal(false)
       expect(await rsr.weights(addr2.address, addr2.address)).to.equal(0)
       expect(await rsr.hasWeights(addr2.address)).to.equal(false)
+    })
+
+    it('should cross balances and allowance when using "transferFrom"', async () => {
+      expect(await rsr.balCrossed(owner.address)).to.equal(false)
+      expect(await rsr.allowanceCrossed(owner.address, addr2.address)).to.equal(false)
+
+      await rsr.connect(owner).transferFrom(owner.address, addr2.address, ONE.div(2))
+      expect(await rsr.balCrossed(owner.address)).to.equal(true)
+      expect(await rsr.allowanceCrossed(addr1.address, addr2.address)).to.equal(true)
     })
   })
 })
