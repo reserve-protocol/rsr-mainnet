@@ -5,7 +5,14 @@ import { BigNumberish, ContractFactory } from 'ethers'
 import { ethers } from 'hardhat'
 
 import { bn, ONE, ZERO } from '../common/numbers'
-import { ERC20Mock, ReserveRightsTokenMock, RSR, SiphonSpell, SiphonSpellMock, UpgradeSpell } from '../typechain'
+import {
+  ERC20Mock,
+  ReserveRightsTokenMock,
+  RSR,
+  SiphonSpell,
+  SiphonSpellMock,
+  UpgradeSpell,
+} from '../typechain'
 
 let owner: SignerWithAddress
 let addr1: SignerWithAddress
@@ -37,7 +44,7 @@ interface Siphon {
 async function castSiphons(...siphons: Siphon[]) {
   const siphonSpell = <SiphonSpellMock>await SiphonSpellFactory.connect(owner).deploy(rsr.address)
   for (let i = 0; i < siphons.length; i++) {
-    siphonSpell.planSiphon(siphons[i].from, { to: siphons[i].to, weight: siphons[i].weight })
+    await siphonSpell.planSiphon(siphons[i].from, { to: siphons[i].to, weight: siphons[i].weight })
   }
   await rsr.connect(owner).castSpell(siphonSpell.address)
 }
