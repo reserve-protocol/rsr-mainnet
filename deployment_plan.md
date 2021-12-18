@@ -74,19 +74,18 @@ Alice is not already in use anywhere else, and Alice is not meant to hold any sp
 
 Add tbd entries as we learn them
 
-|--------------------------|--------------------------------------------|
 | Name of acct or contract | Address                                    |
-|--------------------------|--------------------------------------------|
+|                          |                                            |
 | CompanySafe              | 0xA7b123D54BcEc14b4206dAb796982a6d5aaA6770 |
 | OldPauser                | 0xBb20467EcccB3F60F8dbEca09a61879893e44069 |
 | Alice                    | tbd                                        |
-|--------------------------|--------------------------------------------|
+|                          |                                            |
 | Old RSR                  | 0x8762db106b2c2a0bccb3a80d1ed41273552616e8 |
-|--------------------------|--------------------------------------------|
+|                          |                                            |
 | (New) RSR                | tbd                                        |
 | UpgradeSpell             | tbd                                        |
 | SiphonSpell              | tbd                                        |
-|--------------------------|--------------------------------------------|
+
 
 
     
