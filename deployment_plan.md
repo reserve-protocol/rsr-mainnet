@@ -24,38 +24,39 @@ Alice is not already in use anywhere else, and Alice is not meant to hold any sp
 **When?** The first convenient time after our contracts are back from audit, and we've acted on all issues they've suggested.
 
 1. As Alice, Deploy RSR. Verify:
-    - 
-    -
-    - 
+   * -
+   * - 
+   * -
+    
 2. As Alice, Deploy UpgradeSpell. Verify:
-    -
-    -
-    - 
+   * -
+   * -
+   * - 
 3. As Alice, Call RSR.addPauser(CompanySafe) and then RSR.renouncePauser(). Verify:
-    -
-    -
-    -
+   * -
+   * -
+   * -
     
 ### Phase 2
 **When?**  The earliest convenient time to use Malcolm after Phase 1.
 
 1. As OldPauser, via Etherscan, call OldRSR.addPauser(UpgradeSpell). Verify that:
-    -
-    - 
-    -
+   * -
+   * - 
+   * -
     
 ### Phase 3
 - **When?** Shortly after Last Call.
 
 1. As Alice, deploy up-to-date SiphonSpell. Verify:
-    - 
-    - 
-    - 
+   * - 
+   * - 
+   * - 
 2. Re-verify the correctness of the current deployment:
 3. As CompanySafe, cast that SiphonSpell. Verify:
-    - ... correct resulting weights
-    - 
-    - 
+   * - ... correct resulting weights
+   * - 
+   * - 
 
 ### Phase 4
 - **When?** Upgrade Time.
@@ -63,9 +64,9 @@ Alice is not already in use anywhere else, and Alice is not meant to hold any sp
 1. In the hour before Upgrade Time, company safe keyholders prepare all but the execution confirmation needed to cast the UpgradeSpell.
 
 2. _At_ Upgrade Time, as CompanySafe, cast the UpgradeSpell. Verify:
-    -
-    -
-    -
+   * -
+   * -
+   * -
 
 # Long-lived State
 
