@@ -1,14 +1,13 @@
-import { ethers } from "hardhat";
+import { ethers } from 'hardhat'
 import hre from 'hardhat'
-import { networkConfig } from '../common/configuration'
-import { getChainId, isValidContract } from '../common/blockchain-utils'
 
+import { getChainId, isValidContract } from '../common/blockchain-utils'
+import { networkConfig } from '../common/configuration'
 import { RSR } from '../typechain'
 
 let rsrToken: RSR
 
 async function main() {
-
   const [owner] = await hre.ethers.getSigners()
   const chainId = await getChainId(hre)
 
@@ -16,20 +15,20 @@ async function main() {
   if (!networkConfig[chainId]) {
     throw new Error(`Missing network configuration for ${hre.network.name}`)
   }
-  
+
   // Get Siphon spell
   let siphonAddress: string
   if (networkConfig[chainId].siphonSpell) {
     siphonAddress = networkConfig[chainId].siphonSpell as string
     const valid: boolean = await isValidContract(hre, siphonAddress)
-    if(!valid){
-        throw new Error(`Siphon Spell contract not found in network ${hre.network.name}`)
+    if (!valid) {
+      throw new Error(`Siphon Spell contract not found in network ${hre.network.name}`)
     }
-} else {
+  } else {
     throw new Error(`Missing address for Siphon Spell in network ${hre.network.name}`)
   }
 
-  // Get RSR 
+  // Get RSR
   let rsrAddr: string
 
   if (networkConfig[chainId].rsr) {
@@ -44,19 +43,20 @@ async function main() {
 
   // Get RSR
   rsrToken = <RSR>await ethers.getContractAt('RSR', rsrAddr)
-  
+
   // Cast Siphon Spell on RSR
   await rsrToken.connect(owner).castSpell(siphonAddress)
 
   /**************************************************************************/
 
   console.log('*********************************************************************')
-  console.log(`Siphons spell ${siphonAddress} casted for RSR ${rsrToken.address} on network ${hre.network.name} (${chainId})\n`)
+  console.log(
+    `Siphons spell ${siphonAddress} casted for RSR ${rsrToken.address} on network ${hre.network.name} (${chainId})\n`
+  )
   console.log('********************************************************************')
-
 }
 
 main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+  console.error(error)
+  process.exitCode = 1
+})

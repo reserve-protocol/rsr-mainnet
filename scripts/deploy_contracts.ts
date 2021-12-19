@@ -1,9 +1,10 @@
 import { ethers } from 'hardhat'
 import hre from 'hardhat'
-import { networkConfig } from '../common/configuration'
-import { getChainId, isValidContract } from '../common/blockchain-utils'
 
+import { getChainId, isValidContract } from '../common/blockchain-utils'
+import { networkConfig } from '../common/configuration'
 import { RSR, SiphonSpell, UpgradeSpell } from '../typechain'
+import { UPGRADE_SIPHONS } from './siphon_config'
 
 let rsrToken: RSR
 let siphonSpell: SiphonSpell
@@ -46,7 +47,7 @@ async function main() {
 
   // Note: For now, setting deployer account as owner to add new siphons later
   const SiphonSpellfactory = await ethers.getContractFactory('SiphonSpell')
-  siphonSpell = <SiphonSpell>await SiphonSpellfactory.deploy(rsrToken.address, deployer.address)
+  siphonSpell = <SiphonSpell>await SiphonSpellfactory.deploy(rsrToken.address, UPGRADE_SIPHONS)
   await siphonSpell.deployed()
 
   console.log('Siphon Spell deployed to:', siphonSpell.address)
