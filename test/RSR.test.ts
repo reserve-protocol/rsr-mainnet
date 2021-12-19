@@ -5,14 +5,7 @@ import { BigNumberish, ContractFactory } from 'ethers'
 import { ethers } from 'hardhat'
 
 import { bn, ONE, ZERO } from '../common/numbers'
-import {
-  ERC20Mock,
-  ReserveRightsTokenMock,
-  RSR,
-  SiphonSpell,
-  SiphonSpellMock,
-  UpgradeSpell,
-} from '../typechain'
+import { ERC20Mock, ReserveRightsTokenMock, RSR, SiphonSpell, UpgradeSpell } from '../typechain'
 
 let owner: SignerWithAddress
 let addr1: SignerWithAddress
@@ -42,10 +35,9 @@ interface Siphon {
 }
 
 async function castSiphons(...siphons: Siphon[]) {
-  const siphonSpell = <SiphonSpellMock>await SiphonSpellFactory.connect(owner).deploy(rsr.address)
-  for (let i = 0; i < siphons.length; i++) {
-    await siphonSpell.planSiphon(siphons[i].from, { to: siphons[i].to, weight: siphons[i].weight })
-  }
+  const siphonSpell = <SiphonSpell>(
+    await SiphonSpellFactory.connect(owner).deploy(rsr.address, siphons)
+  )
   await rsr.connect(owner).castSpell(siphonSpell.address)
 }
 
@@ -63,7 +55,7 @@ describe('RSR contract', () => {
     const RSR = await ethers.getContractFactory('RSR')
     rsr = <RSR>await RSR.connect(owner).deploy(oldRSR.address)
     // Spells
-    SiphonSpellFactory = await ethers.getContractFactory('SiphonSpellMock')
+    SiphonSpellFactory = await ethers.getContractFactory('SiphonSpell')
     UpgradeSpellFactory = await ethers.getContractFactory('UpgradeSpell')
     upgradeSpell = <UpgradeSpell>await UpgradeSpellFactory.deploy(oldRSR.address, rsr.address)
     oldRSR.connect(owner).addPauser(upgradeSpell.address)
@@ -147,7 +139,7 @@ describe('RSR contract', () => {
       )
     })
 
-    it.only('should cast siphon without change', async () => {
+    it('should cast siphon without change', async () => {
       await castSiphons({ from: addr1.address, to: addr1.address, weight: 0 })
       expect(await rsr.regent()).to.equal(ZERO_ADDRESS)
       expect(await rsr.owner()).to.equal(owner.address)
