@@ -23,8 +23,8 @@ Alice is not already in use anywhere else, and Alice is not meant to hold any sp
 ### Phase 1
 **When?** The first convenient time after our contracts are back from audit, and we've acted on all issues they've suggested.
 
-1. As Alice, Deploy RSR. Verify:
-   * -
+1. As Alice, Deploy RSR + transferOwnership(CompanySafe). Verify:
+   * - CompanySafe is the owner of new RSR
    * - 
    * -
     
@@ -32,11 +32,7 @@ Alice is not already in use anywhere else, and Alice is not meant to hold any sp
    * -
    * -
    * - 
-3. As Alice, Call RSR.transferOwnership(CompanySafe). Verify:
-   * -
-   * -
-   * -
-    
+
 ### Phase 2
 **When?**  The earliest convenient time to use OldPauser after Phase 1.
 
