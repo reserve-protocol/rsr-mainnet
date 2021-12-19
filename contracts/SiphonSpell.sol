@@ -5,12 +5,6 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./RSR.sol";
 import "./Spell.sol";
 
-// TODO: Include in scripts
-// uint64 half = rsr_.WEIGHT_ONE() / 2;
-
-// ...more, and probably most accounts will have 2 outgoing edges rather than 1
-// Add siphons here. Right now it's just 50% for everyone to show what it looks like.
-
 /*
  * @title SiphonSpell
  * @dev A one-time-use atomic series of siphon actions, castable via RSR.castSpell()
