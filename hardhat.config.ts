@@ -5,7 +5,7 @@ import 'hardhat-gas-reporter'
 import 'solidity-coverage'
 
 import * as dotenv from 'dotenv'
-import { HardhatUserConfig, task } from 'hardhat/config'
+import { HardhatUserConfig } from 'hardhat/config'
 
 dotenv.config()
 
@@ -49,4 +49,3 @@ const config: HardhatUserConfig = {
 }
 
 export default config
-

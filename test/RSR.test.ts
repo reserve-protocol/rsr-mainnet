@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-import { signERC2612Permit } from 'eth-permit'
 import { expect } from 'chai'
+import { signERC2612Permit } from 'eth-permit'
 import { BigNumberish, ContractFactory } from 'ethers'
 import { ethers } from 'hardhat'
 
@@ -18,7 +18,7 @@ let upgradeSpell: UpgradeSpell
 let rsr: RSR
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 const ONE_ADDRESS = '0x0000000000000000000000000000000000000001'
-const WEIGHT_ONE = 1000
+const WEIGHT_ONE = bn('1e18')
 
 async function setInitialBalances() {
   await oldRSR.mint(owner.address, ONE)
@@ -28,11 +28,16 @@ async function setInitialBalances() {
   await oldRSR.connect(owner).approve(addr2.address, ONE)
 }
 
-async function castSiphon(from: string, to: string, weight: BigNumberish) {
+interface Siphon {
+  from: string
+  to: string
+  weight: BigNumberish
+}
+
+async function castSiphons(...siphons: Siphon[]) {
   const siphonSpell = <SiphonSpell>(
-    await SiphonSpellFactory.connect(owner).deploy(rsr.address, owner.address)
+    await SiphonSpellFactory.connect(owner).deploy(rsr.address, siphons)
   )
-  await siphonSpell.connect(owner).planSiphon(from, { to: to, weight: weight })
   await rsr.connect(owner).castSpell(siphonSpell.address)
 }
 
@@ -135,13 +140,13 @@ describe('RSR contract', () => {
     })
 
     it('should cast siphon without change', async () => {
-      await castSiphon(addr1.address, addr1.address, 0)
+      await castSiphons({ from: addr1.address, to: addr1.address, weight: 0 })
       expect(await rsr.regent()).to.equal(ZERO_ADDRESS)
       expect(await rsr.owner()).to.equal(owner.address)
     })
 
     it('should cast siphon with change', async () => {
-      await castSiphon(addr1.address, addr1.address, WEIGHT_ONE)
+      await castSiphons({ from: addr1.address, to: addr1.address, weight: WEIGHT_ONE })
       expect(await rsr.balCrossed(addr1.address)).to.equal(false)
       expect(await rsr.weights(addr1.address, addr1.address)).to.equal(WEIGHT_ONE)
       expect(await rsr.hasWeights(addr1.address)).to.equal(true)
@@ -151,16 +156,16 @@ describe('RSR contract', () => {
       expect(await rsr.hasWeights(addr1.address)).to.equal(false)
       expect(await rsr.hasWeights(addr2.address)).to.equal(false)
       expect(await rsr.hasWeights(addr3.address)).to.equal(false)
-      await castSiphon(addr1.address, addr2.address, WEIGHT_ONE / 2)
+      await castSiphons({ from: addr1.address, to: addr2.address, weight: WEIGHT_ONE.div(2) })
 
-      expect(await rsr.weights(addr1.address, addr1.address)).to.equal(WEIGHT_ONE / 2)
-      expect(await rsr.weights(addr1.address, addr2.address)).to.equal(WEIGHT_ONE / 2)
+      expect(await rsr.weights(addr1.address, addr1.address)).to.equal(WEIGHT_ONE.div(2))
+      expect(await rsr.weights(addr1.address, addr2.address)).to.equal(WEIGHT_ONE.div(2))
 
-      await castSiphon(addr1.address, addr3.address, WEIGHT_ONE / 4)
+      await castSiphons({ from: addr1.address, to: addr3.address, weight: WEIGHT_ONE.div(4) })
 
-      expect(await rsr.weights(addr1.address, addr1.address)).to.equal(WEIGHT_ONE / 4)
-      expect(await rsr.weights(addr1.address, addr3.address)).to.equal(WEIGHT_ONE / 4)
-      expect(await rsr.weights(addr1.address, addr2.address)).to.equal(WEIGHT_ONE / 2)
+      expect(await rsr.weights(addr1.address, addr1.address)).to.equal(WEIGHT_ONE.div(4))
+      expect(await rsr.weights(addr1.address, addr3.address)).to.equal(WEIGHT_ONE.div(4))
+      expect(await rsr.weights(addr1.address, addr2.address)).to.equal(WEIGHT_ONE.div(2))
       expect(await rsr.hasWeights(addr1.address)).to.equal(true)
       // Only move sender weight not recipient
       expect(await rsr.hasWeights(addr2.address)).to.equal(false)
@@ -168,7 +173,9 @@ describe('RSR contract', () => {
     })
 
     it('should not distribute more weight than the current account has', async () => {
-      await rsr.connect(owner).siphon(addr1.address, addr1.address, addr2.address, WEIGHT_ONE / 2)
+      await rsr
+        .connect(owner)
+        .siphon(addr1.address, addr1.address, addr2.address, WEIGHT_ONE.div(2))
       await expect(
         rsr.connect(owner).siphon(addr1.address, addr1.address, addr2.address, WEIGHT_ONE)
       ).to.be.revertedWith('weight too big')
@@ -208,8 +215,8 @@ describe('RSR contract', () => {
     })
 
     it('should calculate balances correctly after siphon', async () => {
-      await castSiphon(addr1.address, addr2.address, WEIGHT_ONE / 2)
-      await castSiphon(addr2.address, addr3.address, WEIGHT_ONE)
+      await castSiphons({ from: addr1.address, to: addr2.address, weight: WEIGHT_ONE.div(2) })
+      await castSiphons({ from: addr2.address, to: addr3.address, weight: WEIGHT_ONE })
       await rsr.connect(owner).castSpell(upgradeSpell.address)
       expect(await rsr.balanceOf(addr1.address)).to.eq(ONE)
       expect(await rsr.balanceOf(addr2.address)).to.eq(ONE)
