@@ -32,13 +32,13 @@ Alice is not already in use anywhere else, and Alice is not meant to hold any sp
    * -
    * -
    * - 
-3. As Alice, Call RSR.addPauser(CompanySafe) and then RSR.renouncePauser(). Verify:
+3. As Alice, Call RSR.transferOwnership(CompanySafe). Verify:
    * -
    * -
    * -
     
 ### Phase 2
-**When?**  The earliest convenient time to use Malcolm after Phase 1.
+**When?**  The earliest convenient time to use OldPauser after Phase 1.
 
 1. As OldPauser, via Etherscan, call OldRSR.addPauser(UpgradeSpell). Verify that:
    * -
