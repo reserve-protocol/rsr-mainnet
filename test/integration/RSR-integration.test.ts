@@ -4,11 +4,12 @@ import { expect } from 'chai'
 import { BigNumber } from 'ethers'
 import { ethers } from 'hardhat'
 import hre from 'hardhat'
-import { impersonate } from './utils/accounts'
+
 import { MultiSigWalletWithDailyLimit } from '../../typechain/MultiSigWalletWithDailyLimit'
 import { ReserveRightsToken } from '../../typechain/ReserveRightsToken'
 import { RSR } from '../../typechain/RSR'
 import { SlowWallet } from '../../typechain/SlowWallet'
+import { impersonate } from './utils/accounts'
 
 // Relevant addresses (Mainnet)
 const RSR_PREVIOUS_ADDRESS = '0x8762db106b2c2a0bccb3a80d1ed41273552616e8'

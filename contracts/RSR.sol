@@ -5,19 +5,19 @@ import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./RegentMixin.sol";
-import "./ISpell.sol";
+import "./MageMixin.sol";
 
 /*
  * @title RSR
  * @dev An ERC20 insurance token for the Reserve Protocol ecosystem.
  */
-contract RSR is RegentMixin, ERC20Permit {
+contract RSR is MageMixin, ERC20Permit {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     ERC20Pausable public immutable oldRSR;
-    uint16 public constant WEIGHT_ONE = 1e3;
-    /// A uint16 value `w` is a _weight_, and it represents the fractional value `w / WEIGHT_ONE`.
+    uint64 public constant WEIGHT_ONE = 1e18;
+    /// A uint64 value `w` is a _weight_, and it represents the fractional value `w / WEIGHT_ONE`.
+
     uint256 private immutable fixedSupply;
 
     /** @dev
@@ -44,12 +44,12 @@ contract RSR is RegentMixin, ERC20Permit {
     /// If hasWeights[A], then A's balances should be forwarded as by weights[A][_]
     mapping(address => bool) public hasWeights;
 
-    /// weights: map(OldRSR addr -> RSR addr -> uint16 weight)
+    /// weights: map(OldRSR addr -> RSR addr -> uint64 weight)
     /// weights[A][B] is the fraction of A's old balance that should be forwarded to B.
     ///
     /// (Again, with the caveat of hasWeights; if weights[A][B] == 0 for all B, then
     ///  hasWeights[A] = false, and A's old balance should just stay where it is!)
-    mapping(address => mapping(address => uint16)) public weights;
+    mapping(address => mapping(address => uint64)) public weights;
 
     /// Invariant: For all A and B, if weights[A][B] > 0, then A is in origins[B]
     ///
@@ -124,12 +124,12 @@ contract RSR is RegentMixin, ERC20Permit {
     /// @param from The address that has the balance on OldRSR
     /// @param oldTo The receiving address to siphon tokens away from
     /// @param newTo The receiving address to siphon tokens towards
-    /// @param weight A uint between 0 and the current old->prev weight, max 1000 (WEIGHT_ONE)
+    /// @param weight A uint between 0 and the current old->prev weight, max WEIGHT_ONE
     function siphon(
         address from,
         address oldTo,
         address newTo,
-        uint16 weight
+        uint64 weight
     ) external onlyAdmin {
         require(!oldRSR.paused(), "old RSR is already paused");
         _siphon(from, oldTo, newTo, weight);
@@ -138,13 +138,6 @@ contract RSR is RegentMixin, ERC20Permit {
     /// Renounces all ownership of RSR, callable by the Regent / Owner
     function renounceOwnership() public override onlyAdmin {
         _transferOwnership(address(0));
-    }
-
-    /// Grants regent to an ISpell, casts the spell, and restore regent
-    function castSpell(ISpell spell) external onlyOwner {
-        _grantRegent(address(spell));
-        spell.cast();
-        _grantRegent(address(0));
     }
 
     /// Fill zero-addressed dust balances that were lost during migration
@@ -261,7 +254,7 @@ contract RSR is RegentMixin, ERC20Permit {
         address from,
         address oldTo,
         address newTo,
-        uint16 weight
+        uint64 weight
     ) internal {
         if (!hasWeights[from]) {
             origins[from].add(from);
@@ -282,7 +275,7 @@ contract RSR is RegentMixin, ERC20Permit {
             sum = oldRSR.balanceOf(account);
         }
         for (uint256 i = 0; i < origins[account].length(); i++) {
-            // Note that there is an acceptable loss of precision equal to ~1e3 RSR quanta
+            // Note that there is an acceptable loss of precision equal to ~1e18 RSR quanta
             address from = origins[account].at(i);
             sum += (oldRSR.balanceOf(from) * weights[from][account]) / WEIGHT_ONE;
         }
