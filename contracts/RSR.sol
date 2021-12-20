@@ -5,13 +5,14 @@ import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 import "./MageMixin.sol";
 
 /*
  * @title RSR
  * @dev An ERC20 insurance token for the Reserve Protocol ecosystem.
  */
-contract RSR is MageMixin, ERC20Permit {
+contract RSR is MageMixin, ERC20Permit, Pausable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     ERC20Pausable public immutable oldRSR;
@@ -90,7 +91,7 @@ contract RSR is MageMixin, ERC20Permit {
         fixedSupply = ERC20Pausable(prevRSR_).totalSupply();
     }
 
-    modifier onlyAfterPause() {
+    modifier onlyAfterFork() {
         require(oldRSR.paused(), "waiting for oldRSR to pause");
         require(owner() == address(0), "owner must be set to zero");
         _;
@@ -135,9 +136,19 @@ contract RSR is MageMixin, ERC20Permit {
         _siphon(from, oldTo, newTo, weight);
     }
 
-    /// Renounces all ownership of RSR, callable by the Regent / Owner
+    /// Renounce all ownership of RSR, callable by the Regent / Owner
     function renounceOwnership() public override onlyAdmin {
         _transferOwnership(address(0));
+    }
+
+    /// Pause ERC20 + ERC2612 functions
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /// Unpause ERC20 + ERC2612 functions
+    function unpause() external onlyOwner {
+        _unpause();
     }
 
     /// Fill zero-addressed dust balances that were lost during migration
@@ -154,7 +165,8 @@ contract RSR is MageMixin, ERC20Permit {
     function transfer(address recipient, uint256 amount)
         public
         override
-        onlyAfterPause
+        whenNotPaused
+        onlyAfterFork
         notToThis(recipient)
         ensureBalCrossed(_msgSender())
         returns (bool)
@@ -169,7 +181,8 @@ contract RSR is MageMixin, ERC20Permit {
     )
         public
         override
-        onlyAfterPause
+        whenNotPaused
+        onlyAfterFork
         notToThis(recipient)
         ensureBalCrossed(sender)
         ensureAllowanceCrossed(sender, recipient)
@@ -181,7 +194,8 @@ contract RSR is MageMixin, ERC20Permit {
     function approve(address spender, uint256 amount)
         public
         override
-        onlyAfterPause
+        whenNotPaused
+        onlyAfterFork
         returns (bool)
     {
         _approve(_msgSender(), spender, amount);
@@ -197,7 +211,7 @@ contract RSR is MageMixin, ERC20Permit {
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) public override onlyAfterPause {
+    ) public override whenNotPaused onlyAfterFork {
         super.permit(owner, spender, value, deadline, v, r, s);
         allowanceCrossed[_msgSender()][spender] = true;
     }
@@ -205,7 +219,8 @@ contract RSR is MageMixin, ERC20Permit {
     function increaseAllowance(address spender, uint256 addedValue)
         public
         override
-        onlyAfterPause
+        whenNotPaused
+        onlyAfterFork
         ensureAllowanceCrossed(_msgSender(), spender)
         returns (bool)
     {
@@ -215,7 +230,8 @@ contract RSR is MageMixin, ERC20Permit {
     function decreaseAllowance(address spender, uint256 subbedValue)
         public
         override
-        onlyAfterPause
+        whenNotPaused
+        onlyAfterFork
         ensureAllowanceCrossed(_msgSender(), spender)
         returns (bool)
     {
