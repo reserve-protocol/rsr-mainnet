@@ -66,3 +66,31 @@ For running scripts and tasks using Mainnet Forking a `FORK` environment variabl
 ```bash
 FORK=true npx hardhat node
 ```
+
+### To try out the Deployment scripts against local Mainnet Fork
+
+* Run in a separate terminal a local forking node following the instructions above.
+
+```bash
+FORK=true npx hardhat node
+```
+
+* In a separate terminal you will need to run the following scripts:
+
+- Run the script which deploys the *RSR* and *UpgradeSpell* contracts. Make sure the previous RSR address is properly configured in `common\configuration.ts` with the Mainnet address. 
+
+```bash
+npx hardhat run scripts/deployment/1_deploy_rsr_upgrade_spell.ts --network localhost
+```
+
+This will create a local `31337-tmp-deployments.json` file with the corresponding addresses. Do not delete or modify this file as it wil be used for later scripts.
+
+- Run the script which deploys the *SiphonSpell* contract. Verification script #2 is not required for local development chains.
+
+```bash
+npx hardhat run scripts/deployment/3_deploy_siphon_spell.ts --network localhost
+```
+
+This will update the `SiphonSpell` address in the local `31337-tmp-deployments.json` file which was previously generated.
+
+
