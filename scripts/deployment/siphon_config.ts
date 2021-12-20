@@ -1,4 +1,4 @@
-import { bn } from 'common/numbers'
+import { bn } from '../../common/numbers'
 import { BigNumberish } from 'ethers'
 
 type Siphon = {
