@@ -62,7 +62,7 @@ describe('RSR contract', () => {
   })
 
   describe('Deployment', () => {
-    it('Should inherit the total supply for the old RSR', async () => {
+    it('should inherit the total supply for the old RSR', async () => {
       const totalSupplyPrev = await oldRSR.totalSupply()
       expect(await rsr.totalSupply()).to.equal(totalSupplyPrev)
     })
@@ -143,6 +143,29 @@ describe('RSR contract', () => {
       await castSiphons({ from: addr1.address, to: addr1.address, weight: 0 })
       expect(await rsr.regent()).to.equal(ZERO_ADDRESS)
       expect(await rsr.owner()).to.equal(owner.address)
+    })
+
+    it('should not allow casting a siphon if its not from the RSR contract', async () => {
+      const siphonSpell = <SiphonSpell>(
+        await SiphonSpellFactory.connect(owner).deploy(rsr.address, [])
+      )
+
+      await expect(siphonSpell.connect(owner).cast()).to.be.revertedWith('rsr only')
+    })
+
+    it('should not be able to cast the siphon spell more than once', async () => {
+      const siphonSpell = <SiphonSpell>await SiphonSpellFactory.connect(owner).deploy(rsr.address, [
+        {
+          from: addr1.address,
+          to: addr1.address,
+          weight: 0,
+        },
+      ])
+
+      await rsr.connect(owner).castSpell(siphonSpell.address)
+      await expect(rsr.connect(owner).castSpell(siphonSpell.address)).to.be.revertedWith(
+        'spell already cast'
+      )
     })
 
     it('should cast siphon with change', async () => {
