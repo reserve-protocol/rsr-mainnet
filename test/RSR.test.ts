@@ -355,5 +355,63 @@ describe('RSR contract', () => {
     it('should not allow token transfer to this address', async () => {
       await expect(rsr.connect(owner).transfer(rsr.address, ONE)).to.be.reverted
     })
+
+    describe('Pausing', () => {
+      beforeEach(async () => {
+        await rsr.connect(owner).pause()
+      })
+
+      it('should revert transfer', async () => {
+        await expect(rsr.connect(addr1).transfer(addr2.address, 1)).to.be.revertedWith(
+          'Pausable: paused'
+        )
+      })
+
+      it('should revert transferFrom', async () => {
+        await expect(
+          rsr.connect(addr1).transferFrom(addr1.address, addr2.address, 1)
+        ).to.be.revertedWith('Pausable: paused')
+      })
+
+      it('should revert approve', async () => {
+        await expect(rsr.connect(addr1).approve(addr2.address, 1)).to.be.revertedWith(
+          'Pausable: paused'
+        )
+      })
+
+      it('should revert permit', async () => {
+        const permit = await signERC2612Permit(
+          ethers.provider,
+          rsr.address,
+          owner.address,
+          addr1.address,
+          '0'
+        )
+
+        await expect(
+          rsr
+            .connect(addr1)
+            .permit(owner.address, addr1.address, 0, permit.deadline, permit.v, permit.r, permit.s)
+        ).to.be.revertedWith('Pausable: paused')
+      })
+
+      it('should revert increaseAllowance', async () => {
+        await expect(rsr.connect(addr1).increaseAllowance(addr2.address, 1)).to.be.revertedWith(
+          'Pausable: paused'
+        )
+      })
+
+      it('should revert decreaseAllowance', async () => {
+        await expect(rsr.connect(addr1).decreaseAllowance(addr2.address, 1)).to.be.revertedWith(
+          'Pausable: paused'
+        )
+      })
+
+      it('should change pauser address and unpause', async () => {
+        await rsr.connect(owner).changePauser(addr1.address)
+        expect(await rsr.pauser()).to.equal(addr1.address)
+        await rsr.connect(addr1).unpause()
+      })
+    })
   })
 })
