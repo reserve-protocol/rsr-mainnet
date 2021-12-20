@@ -7,8 +7,6 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "./MageMixin.sol";
 
-import "hardhat/console.sol";
-
 /*
  * @title RSR
  * @dev An ERC20 insurance token for the Reserve Protocol ecosystem.
