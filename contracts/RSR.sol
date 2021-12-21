@@ -125,6 +125,17 @@ contract RSR is Pausable, MageMixin, ERC20Permit {
         _;
     }
 
+    /// Partially crosses an account that has weights some number of steps.
+    /// Calling this function should not impact final balances after crossing.
+    function partiallyCross(address dest, uint256 count) public whenNotPaused {
+        while (origins[dest].length() > 0 && count > 0) {
+            address src = origins[dest].at(count - 1);
+            _mint(dest, (oldRSR.balanceOf(src) * weights[src][dest]) / WEIGHT_ONE);
+            origins[dest].remove(src);
+            count -= 1;
+        }
+    }
+
     // ========================= Admin =========================
     // Note: The owner should be set to the zero address by the time the old RSR is paused
 

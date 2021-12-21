@@ -5,7 +5,7 @@ import { BigNumberish, ContractFactory } from 'ethers'
 import { ethers } from 'hardhat'
 
 import { bn, ONE, ZERO } from '../common/numbers'
-import { ERC20Mock, ReserveRightsTokenMock, RSR, SiphonSpell, UpgradeSpell } from '../typechain'
+import { ERC20Mock, ReserveRightsTokenMock, RSR, RSRMock, SiphonSpell, UpgradeSpell } from '../typechain'
 
 let owner: SignerWithAddress
 let addr1: SignerWithAddress
@@ -15,7 +15,7 @@ let oldRSR: ReserveRightsTokenMock
 let SiphonSpellFactory: ContractFactory
 let UpgradeSpellFactory: ContractFactory
 let upgradeSpell: UpgradeSpell
-let rsr: RSR
+let rsr: RSRMock
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 const ONE_ADDRESS = '0x0000000000000000000000000000000000000001'
 const WEIGHT_ONE = bn('1e18')
@@ -52,8 +52,8 @@ describe('RSR contract', () => {
     const OldRSR = await ethers.getContractFactory('ReserveRightsTokenMock')
     oldRSR = <ReserveRightsTokenMock>await OldRSR.deploy(oldOldRSR.address)
     // Deploy new RSR
-    const RSR = await ethers.getContractFactory('RSR')
-    rsr = <RSR>await RSR.connect(owner).deploy(oldRSR.address)
+    const RSR = await ethers.getContractFactory('RSRMock')
+    rsr = <RSRMock>await RSR.connect(owner).deploy(oldRSR.address)
     // Spells
     SiphonSpellFactory = await ethers.getContractFactory('SiphonSpell')
     UpgradeSpellFactory = await ethers.getContractFactory('UpgradeSpell')
@@ -410,6 +410,29 @@ describe('RSR contract', () => {
         expect(await rsr.pauser()).to.equal(addr1.address)
         await rsr.connect(addr1).unpause()
       })
+    })
+  })
+
+  describe('Partial Crossover', () => {
+    beforeEach(async () => {
+      await setInitialBalances()
+    })
+
+    it('should cross partially for account with multiple fund sources', async () => {
+      await castSiphons({ from: owner.address, to: addr2.address, weight: WEIGHT_ONE })
+      await castSiphons({ from: addr1.address, to: addr2.address, weight: WEIGHT_ONE })
+
+      await rsr.connect(owner).castSpell(upgradeSpell.address)
+      expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(6))
+      expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(6))
+
+      await rsr.connect(addr1).partiallyCross(addr2.address, 1)
+      expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(5))
+      expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(6))
+
+      await rsr.connect(addr1).partiallyCross(addr2.address, 1)
+      expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(3))
+      expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(6))
     })
   })
 })
