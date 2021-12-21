@@ -8,7 +8,7 @@
     "compile": "TS_NODE_TRANSPILE_ONLY=1 npx hardhat compile",
     "devchain": "npx hardhat node",
     "test": "npx solhint 'contracts/**.sol' && npx hardhat test",
-    "test:coverage": "npx hardhat coverage",
+    "test:coverage": "npx hardhat coverage --testfiles 'test/*.test.ts'",
     "test:mainnet": "FORK=true npx hardhat test test/integration/*.test.ts",
     "test:local": "npx hardhat test test/*.test.ts",
     "lint": "npx solhint 'contracts/**.sol' --fix",

@@ -15,5 +15,6 @@ module.exports = {
     'node/no-unsupported-features/es-syntax': ['error', { ignores: ['modules'] }],
     // For typechain
     'node/no-missing-import': 'off',
+    'node/no-extraneous-import': 'off',
   },
 }
