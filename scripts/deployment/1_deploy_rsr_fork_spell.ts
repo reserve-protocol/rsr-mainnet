@@ -3,13 +3,13 @@ import hre, { ethers } from 'hardhat'
 
 import { getChainId, isValidContract } from '../../common/blockchain-utils'
 import { networkConfig } from '../../common/configuration'
-import { RSR, UpgradeSpell } from '../../typechain'
+import { ForkSpell, RSR } from '../../typechain'
 import { fileExists, getDeploymentFilename, IDeployments } from './deployment_utils'
 
 let rsrToken: RSR
-let upgradeSpell: UpgradeSpell
+let forkSpell: ForkSpell
 
-const deploymentsData: IDeployments = { oldRSR: '', rsr: '', upgradeSpell: '', siphonSpell: '' }
+const deploymentsData: IDeployments = { oldRSR: '', rsr: '', forkSpell: '', siphonSpell: '' }
 
 async function main() {
   const [alice] = await hre.ethers.getSigners()
@@ -67,14 +67,14 @@ async function main() {
   // Transfer Ownership
   await rsrToken.connect(alice).transferOwnership(companySafeAddr)
 
-  /** ******************** Deploy Upgrade Spell ****************************************/
-  const UpgradeSpellFactory = await ethers.getContractFactory('UpgradeSpell')
-  upgradeSpell = <UpgradeSpell>await UpgradeSpellFactory.deploy(previousRSRAddr, rsrToken.address)
-  await upgradeSpell.deployed()
+  /** ******************** Deploy Fork Spell ****************************************/
+  const ForkSpellFactory = await ethers.getContractFactory('ForkSpell')
+  forkSpell = <ForkSpell>await ForkSpellFactory.deploy(previousRSRAddr, rsrToken.address)
+  await forkSpell.deployed()
 
-  console.log('Upgrade Spell deployed to:', upgradeSpell.address)
+  console.log('Fork Spell deployed to:', forkSpell.address)
 
-  deploymentsData.upgradeSpell = upgradeSpell.address
+  deploymentsData.forkSpell = forkSpell.address
   /**************************************************************************/
   // Write temporary deployments file
   fs.writeFileSync(tmpDeploymentFile, JSON.stringify(deploymentsData, null, 2))
@@ -85,7 +85,7 @@ async function main() {
   console.log(`Deployments completed successfully on network ${hre.network.name} (${chainId})\n`)
   console.log(`RSR:  ${rsrToken.address}`)
   console.log(`   -> Ownership set to:  ${companySafeAddr}`)
-  console.log(`UpgradeSpell:  ${upgradeSpell.address}`)
+  console.log(`ForkSpell:  ${forkSpell.address}`)
   console.log('********************************************************************')
 }
 

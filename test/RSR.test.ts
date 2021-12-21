@@ -5,7 +5,7 @@ import { BigNumberish, ContractFactory } from 'ethers'
 import { ethers } from 'hardhat'
 
 import { bn, ONE, ZERO } from '../common/numbers'
-import { ERC20Mock, ReserveRightsTokenMock, RSR, RSRMock, SiphonSpell, UpgradeSpell } from '../typechain'
+import { ERC20Mock, ForkSpell, ReserveRightsTokenMock, RSR, RSRMock, SiphonSpell } from '../typechain'
 
 let owner: SignerWithAddress
 let addr1: SignerWithAddress
@@ -13,8 +13,8 @@ let addr2: SignerWithAddress
 let addr3: SignerWithAddress
 let oldRSR: ReserveRightsTokenMock
 let SiphonSpellFactory: ContractFactory
-let UpgradeSpellFactory: ContractFactory
-let upgradeSpell: UpgradeSpell
+let ForkSpellFactory: ContractFactory
+let forkSpell: ForkSpell
 let rsr: RSRMock
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 const WEIGHT_ONE = bn('1e18')
@@ -55,9 +55,9 @@ describe('RSR contract', () => {
     rsr = <RSRMock>await RSR.connect(owner).deploy(oldRSR.address)
     // Spells
     SiphonSpellFactory = await ethers.getContractFactory('SiphonSpell')
-    UpgradeSpellFactory = await ethers.getContractFactory('UpgradeSpell')
-    upgradeSpell = <UpgradeSpell>await UpgradeSpellFactory.deploy(oldRSR.address, rsr.address)
-    oldRSR.connect(owner).addPauser(upgradeSpell.address)
+    ForkSpellFactory = await ethers.getContractFactory('ForkSpell')
+    forkSpell = <ForkSpell>await ForkSpellFactory.deploy(oldRSR.address, rsr.address)
+    oldRSR.connect(owner).addPauser(forkSpell.address)
   })
 
   describe('Deployment', () => {
@@ -67,7 +67,7 @@ describe('RSR contract', () => {
     })
   })
 
-  describe('Prior to the upgrade', () => {
+  describe('Prior to the fork', () => {
     beforeEach(async () => {
       await setInitialBalances()
     })
@@ -203,15 +203,13 @@ describe('RSR contract', () => {
       await setInitialBalances()
     })
 
-    it('does the upgrade', async () => {
-      await rsr.connect(owner).castSpell(upgradeSpell.address)
+    it('does the fork', async () => {
+      await rsr.connect(owner).castSpell(forkSpell.address)
     })
 
     it('reverts if not pauser of oldRSR', async () => {
-      const newUpgradeSpell = <UpgradeSpell>(
-        await UpgradeSpellFactory.deploy(oldRSR.address, rsr.address)
-      )
-      await expect(rsr.connect(owner).castSpell(newUpgradeSpell.address)).to.be.reverted
+      const newForkSpell = <ForkSpell>await ForkSpellFactory.deploy(oldRSR.address, rsr.address)
+      await expect(rsr.connect(owner).castSpell(newForkSpell.address)).to.be.reverted
     })
 
     it('The transition is only complete if RSR dont have an owner', async () => {
@@ -219,21 +217,19 @@ describe('RSR contract', () => {
       await expect(rsr.connect(owner).transfer(addr1.address, ONE)).to.be.reverted
     })
 
-    it('should only upgrade once', async () => {
-      await rsr.connect(owner).castSpell(upgradeSpell.address)
-      await expect(rsr.connect(owner).castSpell(upgradeSpell.address)).to.be.reverted
+    it('should only fork once', async () => {
+      await rsr.connect(owner).castSpell(forkSpell.address)
+      await expect(rsr.connect(owner).castSpell(forkSpell.address)).to.be.reverted
 
-      const newUpgradeSpell = <UpgradeSpell>(
-        await UpgradeSpellFactory.deploy(oldRSR.address, rsr.address)
-      )
-      await oldRSR.addPauser(newUpgradeSpell.address)
-      await expect(rsr.connect(owner).castSpell(newUpgradeSpell.address)).to.be.reverted
+      const newForkSpell = <ForkSpell>await ForkSpellFactory.deploy(oldRSR.address, rsr.address)
+      await oldRSR.addPauser(newForkSpell.address)
+      await expect(rsr.connect(owner).castSpell(newForkSpell.address)).to.be.reverted
     })
 
     it('should calculate balances correctly after siphon', async () => {
       await castSiphons({ from: addr1.address, to: addr2.address, weight: WEIGHT_ONE.div(2) })
       await castSiphons({ from: addr2.address, to: addr3.address, weight: WEIGHT_ONE })
-      await rsr.connect(owner).castSpell(upgradeSpell.address)
+      await rsr.connect(owner).castSpell(forkSpell.address)
       expect(await rsr.balanceOf(addr1.address)).to.eq(ONE)
       expect(await rsr.balanceOf(addr2.address)).to.eq(ONE)
       expect(await rsr.balanceOf(addr3.address)).to.eq(ONE.mul(3))
@@ -243,7 +239,7 @@ describe('RSR contract', () => {
   describe('After The Upgrade (default settings)', () => {
     beforeEach(async () => {
       await setInitialBalances()
-      await rsr.connect(owner).castSpell(upgradeSpell.address)
+      await rsr.connect(owner).castSpell(forkSpell.address)
     })
 
     it('should return oldRSR balanceOf or the sum of old + new depending if the balance is crossed', async () => {
@@ -417,7 +413,7 @@ describe('RSR contract', () => {
       await castSiphons({ from: owner.address, to: addr2.address, weight: WEIGHT_ONE })
       await castSiphons({ from: addr1.address, to: addr2.address, weight: WEIGHT_ONE })
 
-      await rsr.connect(owner).castSpell(upgradeSpell.address)
+      await rsr.connect(owner).castSpell(forkSpell.address)
       expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(6))
       expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(6))
 
@@ -442,7 +438,7 @@ describe('RSR contract', () => {
     it('should be idempotent before crossing for both hasWeights and !hasWeights', async () => {
       await castSiphons({ from: addr1.address, to: addr2.address, weight: WEIGHT_ONE.div(2) })
 
-      await rsr.connect(owner).castSpell(upgradeSpell.address)
+      await rsr.connect(owner).castSpell(forkSpell.address)
       expect(await rsr.oldBal(addr1.address)).to.equal(ONE)
       expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(4))
       expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
@@ -473,7 +469,7 @@ describe('RSR contract', () => {
     it('should be idempotent after crossing for both hasWeights and !hasWeights', async () => {
       await castSiphons({ from: addr1.address, to: addr2.address, weight: WEIGHT_ONE.div(2) })
 
-      await rsr.connect(owner).castSpell(upgradeSpell.address)
+      await rsr.connect(owner).castSpell(forkSpell.address)
       expect(await rsr.oldBal(addr1.address)).to.equal(ONE)
       expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(4))
       expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
@@ -507,7 +503,7 @@ describe('RSR contract', () => {
     it('should be idempotent between two accounts with different crossing statuses', async () => {
       await castSiphons({ from: addr1.address, to: addr2.address, weight: WEIGHT_ONE.div(2) })
 
-      await rsr.connect(owner).castSpell(upgradeSpell.address)
+      await rsr.connect(owner).castSpell(forkSpell.address)
       expect(await rsr.oldBal(addr1.address)).to.equal(ONE)
       expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(4))
       expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
@@ -541,7 +537,7 @@ describe('RSR contract', () => {
     it('should be idempotent between two accounts with different crossing statuses, other direction', async () => {
       await castSiphons({ from: addr1.address, to: addr2.address, weight: WEIGHT_ONE.div(2) })
 
-      await rsr.connect(owner).castSpell(upgradeSpell.address)
+      await rsr.connect(owner).castSpell(forkSpell.address)
       expect(await rsr.oldBal(addr1.address)).to.equal(ONE)
       expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(4))
       expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)

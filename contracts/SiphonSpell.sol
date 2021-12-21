@@ -7,7 +7,7 @@ import "./Spell.sol";
 
 /**
  * @title SiphonSpell
- * @dev A one-time-use atomic series of siphon actions, castable via RSR.castSpell()
+ * @dev A one-time-use atomic series of siphon actions, castable via a Mage
  */
 contract SiphonSpell is Spell {
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -21,12 +21,15 @@ contract SiphonSpell is Spell {
 
     Siphon[] public siphons;
 
+    /// We expect the number of siphons we need to create to fit into this array.
+    /// If you need to make more siphons that will fit, use multiple SiphonSpells.
     constructor(RSR rsr_, Siphon[] memory siphons_) Spell(rsr_) {
         for (uint256 i = 0; i < siphons_.length; i++) {
             siphons.push(siphons_[i]);
         }
     }
 
+    /// Cast all the siphons from storage, once
     function cast() external override onlyRSR onceOnly {
         for (uint256 i = 0; i < siphons.length; i++) {
             Siphon storage s = siphons[i];

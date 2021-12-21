@@ -30,5 +30,6 @@ abstract contract Spell {
     }
 
     /// @dev Overriders should preface their call with the modifiers as well, or super
+    // solhint-disable-next-line
     function cast() external virtual onlyRSR onceOnly {}
 }

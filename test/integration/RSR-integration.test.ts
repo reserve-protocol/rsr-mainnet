@@ -4,12 +4,12 @@ import { expect } from 'chai'
 import { BigNumber } from 'ethers'
 import hre, { ethers } from 'hardhat'
 
+import { ForkSpell } from '../../typechain/ForkSpell'
 import { MultiSigWalletWithDailyLimit } from '../../typechain/MultiSigWalletWithDailyLimit'
 import { ReserveRightsToken } from '../../typechain/ReserveRightsToken'
 import { RSR } from '../../typechain/RSR'
 import { SiphonSpell } from '../../typechain/SiphonSpell'
 import { SlowWallet } from '../../typechain/SlowWallet'
-import { UpgradeSpell } from '../../typechain/UpgradeSpell'
 import { UPGRADE_SIPHONS } from './../../scripts/deployment/siphon_config'
 import { impersonate } from './utils/accounts'
 
@@ -30,7 +30,7 @@ let oldRSR: ReserveRightsToken
 let slowWallet: SlowWallet
 let multisigWallet: MultiSigWalletWithDailyLimit
 let rsrToken: RSR
-let upgradeSpell: UpgradeSpell
+let forkSpell: ForkSpell
 let siphonSpell: SiphonSpell
 
 const deployContracts = async () => {
@@ -66,9 +66,9 @@ const deployContracts = async () => {
   const RSR = await ethers.getContractFactory('RSR')
   rsrToken = <RSR>await RSR.connect(owner).deploy(oldRSR.address)
 
-  // Deploy upgrade spell
-  const UpgradeSpellFactory = await ethers.getContractFactory('UpgradeSpell')
-  upgradeSpell = <UpgradeSpell>await UpgradeSpellFactory.deploy(oldRSR.address, rsrToken.address)
+  // Deploy fork spell
+  const ForkSpellFactory = await ethers.getContractFactory('ForkSpell')
+  forkSpell = <ForkSpell>await ForkSpellFactory.deploy(oldRSR.address, rsrToken.address)
 }
 
 // @comment: contract deployment required before deploying siphons
@@ -82,7 +82,7 @@ describe.skip('RSR contract - Mainnet Forking', function () {
     await deployContracts()
   })
 
-  describe('Before upgrade', async () => {
+  describe('Before fork', async () => {
     it('Should start with the total supply of previous RSR', async function () {
       const totalSupplyPrev = await oldRSR.totalSupply()
       expect(await rsrToken.totalSupply()).to.equal(totalSupplyPrev)
@@ -91,7 +91,7 @@ describe.skip('RSR contract - Mainnet Forking', function () {
 
   describe('Upgrade period', async () => {})
 
-  describe('After upgrade', () => {
+  describe('After fork', () => {
     beforeEach(async () => {
       await deploySiphon()
     })

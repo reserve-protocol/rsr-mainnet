@@ -3,7 +3,7 @@ import fs from 'fs'
 export interface IDeployments {
   oldRSR: string
   rsr: string
-  upgradeSpell: string
+  forkSpell: string
   siphonSpell: string
 }
 

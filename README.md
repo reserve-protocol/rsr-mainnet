@@ -69,7 +69,7 @@ A spell is a contract that implements a one-time series of commands atomically o
 
 We have two spells, currently:
 - SiphonSpell: For performing a series of RSR siphons in a single tx. 
-- UpgradeSpell: For completing the upgrade to RSR
+- ForkSpell: For completing the fork to RSR
 
 ## Nuance: Total Supply
 
