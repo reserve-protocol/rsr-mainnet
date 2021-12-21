@@ -56,6 +56,13 @@ simpler.
 
 The previously deployed version of RSR is referred to in this repo as `OldRSR`. The intended target of this name is the 2019-deployed RSR found at address `0x8762db106b2c2a0bccb3a80d1ed41273552616e8` on Ethereum mainnet. This enables all `RSR` references to be to the newly upgraded 2022 RSR. 
 
+## Roles
+
+There are 3 roles in the new RSR:
+- Pauser: Can pause and unpause the ERC20 + ERC2612 functions. Intended to eventually be set to the zero address but kept longer than `owner`
+- Regent: Intra-tx role assigned temporarily in order to cast one-use spells. Never the sender of a tx. 
+- Owner: Greatest access role. Intended to be set to the zero address at the time of the fork. 
+
 ## Spells
 
 A spell is a contract that implements a one-time series of commands atomically on another contract. Only the owner of RSR can cast spells. 

@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts v4.4.1 (access/Ownable.sol)
-
-pragma solidity ^0.8.0;
+pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -11,7 +9,7 @@ interface ISpell {
 
 /**
  * @title MageMixin
- * @dev A very simple mixin that enables the regent upgrade pattern.
+ * @dev A very simple mixin that enables the regent spell-casting pattern.
  */
 abstract contract MageMixin is Ownable {
     /// The regent pattern
