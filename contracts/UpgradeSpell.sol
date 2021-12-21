@@ -25,5 +25,6 @@ contract UpgradeSpell is Spell {
     function cast() external override onlyRSR onceOnly {
         oldRSR.pause();
         rsr.renounceOwnership();
+        rsr.unpause();
     }
 }
