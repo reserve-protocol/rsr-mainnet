@@ -93,12 +93,7 @@ contract RSR is Pausable, MageMixin, ERC20Permit {
         oldRSR = ERC20Pausable(prevRSR_);
         fixedSupply = ERC20Pausable(prevRSR_).totalSupply();
         pauser = _msgSender();
-    }
-
-    modifier onlyAfterFork() {
-        require(oldRSR.paused(), "waiting for oldRSR to pause");
-        require(owner() == address(0), "owner must be set to zero");
-        _;
+        _pause();
     }
 
     modifier notToThis(address to) {
@@ -160,6 +155,8 @@ contract RSR is Pausable, MageMixin, ERC20Permit {
 
     /// Unpause ERC20 + ERC2612 functions
     function unpause() external onlyAdminOrPauser {
+        require(oldRSR.paused(), "waiting for oldRSR to pause");
+        require(owner() == address(0), "owner must be set to zero");
         _unpause();
     }
 
@@ -182,7 +179,6 @@ contract RSR is Pausable, MageMixin, ERC20Permit {
     function transfer(address recipient, uint256 amount)
         public
         override
-        onlyAfterFork
         whenNotPaused
         notToThis(recipient)
         ensureBalCrossed(_msgSender())
@@ -198,7 +194,6 @@ contract RSR is Pausable, MageMixin, ERC20Permit {
     )
         public
         override
-        onlyAfterFork
         whenNotPaused
         notToThis(recipient)
         ensureBalCrossed(sender)
@@ -208,13 +203,7 @@ contract RSR is Pausable, MageMixin, ERC20Permit {
         return super.transferFrom(sender, recipient, amount);
     }
 
-    function approve(address spender, uint256 amount)
-        public
-        override
-        onlyAfterFork
-        whenNotPaused
-        returns (bool)
-    {
+    function approve(address spender, uint256 amount) public override whenNotPaused returns (bool) {
         _approve(_msgSender(), spender, amount);
         allowanceCrossed[_msgSender()][spender] = true;
         return true;
@@ -228,7 +217,7 @@ contract RSR is Pausable, MageMixin, ERC20Permit {
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) public override onlyAfterFork whenNotPaused {
+    ) public override whenNotPaused {
         super.permit(owner, spender, value, deadline, v, r, s);
         allowanceCrossed[_msgSender()][spender] = true;
     }
@@ -236,7 +225,6 @@ contract RSR is Pausable, MageMixin, ERC20Permit {
     function increaseAllowance(address spender, uint256 addedValue)
         public
         override
-        onlyAfterFork
         whenNotPaused
         ensureAllowanceCrossed(_msgSender(), spender)
         returns (bool)
@@ -247,7 +235,6 @@ contract RSR is Pausable, MageMixin, ERC20Permit {
     function decreaseAllowance(address spender, uint256 subbedValue)
         public
         override
-        onlyAfterFork
         whenNotPaused
         ensureAllowanceCrossed(_msgSender(), spender)
         returns (bool)
