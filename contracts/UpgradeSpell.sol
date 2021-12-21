@@ -9,7 +9,7 @@ interface IPausable {
     function pause() external;
 }
 
-/*
+/**
  * @title UpgradeSpell
  * @dev A one-time-use series of commands to finalize the upgrade to RSR.
  *

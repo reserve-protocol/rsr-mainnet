@@ -3,9 +3,9 @@ pragma solidity 0.8.4;
 
 import "./RSR.sol";
 
-/*
+/**
  * @title Spell
- * @dev A one-time-use atomic series of actions
+ * @dev A one-time-use atomic sequence of actions, used by RSR for contract changes.
  */
 abstract contract Spell {
     RSR public immutable rsr;
@@ -29,6 +29,6 @@ abstract contract Spell {
         _;
     }
 
-    /// @dev Overriders should preface their call with the modifiers
-    function cast() external virtual;
+    /// @dev Overriders should preface their call with the modifiers as well, or super
+    function cast() external virtual onlyRSR onceOnly {}
 }

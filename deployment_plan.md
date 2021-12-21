@@ -34,6 +34,7 @@ TODO: Iterate through this plan, and specify with clarity the specific condition
     * RSR.fixedSupply is 100,000,000,000
     * RSR.owner() is CompanySafe
     * RSR.balanceOf(A) = oldRSR.balanceOf(A), for at least one address A with nonzero balances.
+    * Confirm ForkSpell.rsr() is RSR address
 
 ### Phase 2
 **When?**  The earliest convenient time to use OldPauser after Phase 1.
@@ -54,6 +55,8 @@ TODO: Iterate through this plan, and specify with clarity the specific condition
 
 3. Check on Etherscan to ensure that:
     * SiphonSpell.siphons(x) is what we expect, for at least the values 0, 1, 7, N-1, N, where N is the total number of siphons we intended to initialize the spell with.
+    * Confirm SiphonSpell.rsr() is RSR address
+
    
 4. As CompanySafe, via the Gnosis Safe interface, cast the SiphonSpell.
     * (Remember that CompanySafe transactions require multiple signers!)

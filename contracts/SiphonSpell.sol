@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./RSR.sol";
 import "./Spell.sol";
 
-/*
+/**
  * @title SiphonSpell
  * @dev A one-time-use atomic series of siphon actions, castable via RSR.castSpell()
  */

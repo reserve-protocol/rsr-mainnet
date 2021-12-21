@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "./MageMixin.sol";
 
-/*
+/**
  * @title RSR
  * @dev An ERC20 insurance token for the Reserve Protocol ecosystem.
  */
