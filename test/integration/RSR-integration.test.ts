@@ -94,7 +94,7 @@ describe('RSR contract - Mainnet Forking', function () {
 
       // Attempt to  transfer
       await expect(rsrToken.connect(holder).transfer(addr1.address, amount)).to.be.revertedWith(
-        'waiting for oldRSR to pause'
+        'Pausable: paused'
       )
 
       // Balances remain unchanged
@@ -120,6 +120,7 @@ describe('RSR contract - Mainnet Forking', function () {
 
       // Renounce ownership of new RSR
       await rsrToken.connect(owner).renounceOwnership()
+      await rsrToken.connect(owner).unpause()
 
       totalSupply = await rsrToken.totalSupply()
     })

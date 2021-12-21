@@ -92,19 +92,17 @@ describe('RSR contract', () => {
       ).to.be.revertedWith('only regent or owner')
     })
 
-    it('should allow changing balance at zero address (owner only)', async () => {
-      await expect(rsr.connect(addr1).changeBalanceAtZeroAddress(ONE)).to.be.revertedWith(
-        'Ownable: caller is not the owner'
-      )
+    it('should allow changing balance at address one (owner only)', async () => {
+      await expect(rsr.connect(addr1).tweakDust(ONE)).to.be.revertedWith('only regent or owner')
 
-      await expect(rsr.connect(owner).changeBalanceAtZeroAddress(ONE))
+      await expect(rsr.connect(owner).tweakDust(ONE))
         .to.emit(rsr, 'Transfer')
         .withArgs(ZERO_ADDRESS, ONE_ADDRESS, ONE)
-      await expect(rsr.connect(owner).changeBalanceAtZeroAddress(bn('-1e18').div(2)))
+      await expect(rsr.connect(owner).tweakDust(bn('-1e18').div(2)))
         .to.emit(rsr, 'Transfer')
         .withArgs(ONE_ADDRESS, ZERO_ADDRESS, ONE.div(2))
       // do nothing if amount is zero (coverage purposes)
-      await expect(rsr.connect(owner).changeBalanceAtZeroAddress(ZERO)).to.not.emit(rsr, 'Transfer')
+      await expect(rsr.connect(owner).tweakDust(ZERO)).to.not.emit(rsr, 'Transfer')
       expect(await rsr.balanceOf(ONE_ADDRESS)).to.eq(ONE.div(2))
     })
 
@@ -118,24 +116,24 @@ describe('RSR contract', () => {
       )
 
       await expect(rsr.connect(owner).transfer(addr1.address, 0)).to.be.revertedWith(
-        'waiting for oldRSR to pause'
+        'Pausable: paused'
       )
       await expect(
         rsr.connect(owner).transferFrom(owner.address, addr1.address, 0)
-      ).to.be.revertedWith('waiting for oldRSR to pause')
+      ).to.be.revertedWith('Pausable: paused')
       await expect(rsr.connect(owner).approve(addr1.address, 0)).to.be.revertedWith(
-        'waiting for oldRSR to pause'
+        'Pausable: paused'
       )
       await expect(
         rsr
           .connect(owner)
           .permit(owner.address, addr1.address, '0', permit.deadline, permit.v, permit.r, permit.s)
-      ).to.be.revertedWith('waiting for oldRSR to pause')
+      ).to.be.revertedWith('Pausable: paused')
       await expect(rsr.connect(owner).increaseAllowance(addr1.address, 0)).to.be.revertedWith(
-        'waiting for oldRSR to pause'
+        'Pausable: paused'
       )
       await expect(rsr.connect(owner).decreaseAllowance(addr1.address, 0)).to.be.revertedWith(
-        'waiting for oldRSR to pause'
+        'Pausable: paused'
       )
     })
 

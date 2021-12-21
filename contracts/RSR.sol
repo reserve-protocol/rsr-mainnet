@@ -165,8 +165,8 @@ contract RSR is Pausable, MageMixin, ERC20Permit {
         pauser = newPauser;
     }
 
-    /// Fill zero-addressed dust balances that were lost during migration
-    function changeBalanceAtZeroAddress(int256 amount) external onlyAdmin {
+    /// Fill dust balances that were lost during migration at address 0x1
+    function tweakDust(int256 amount) external onlyAdmin {
         if (amount > 0) {
             _mint(address(1), uint256(amount));
         } else if (amount < 0) {
