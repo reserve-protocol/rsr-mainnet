@@ -4,6 +4,7 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "./MageMixin.sol";
 
@@ -11,7 +12,7 @@ import "./MageMixin.sol";
  * @title RSR
  * @dev An ERC20 insurance token for the Reserve Protocol ecosystem.
  */
-contract RSR is Pausable, MageMixin, ERC20Permit {
+contract RSR is Pausable, Ownable, MageMixin, ERC20Permit {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     event PauserChanged(address indexed oldPauser, address newPauser);
