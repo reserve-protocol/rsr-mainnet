@@ -427,12 +427,152 @@ describe('RSR contract', () => {
       expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(6))
 
       await rsr.connect(addr1).partiallyCross(addr2.address, 1)
-      expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(5))
+      expect(await rsr.oldBal(addr2.address)).to.not.equal(ONE.mul(6))
+      expect(await rsr.oldBal(addr2.address)).to.not.equal(ONE.mul(3))
       expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(6))
 
       await rsr.connect(addr1).partiallyCross(addr2.address, 1)
       expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(3))
       expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(6))
+
+      await rsr.connect(addr1).partiallyCross(addr2.address, 1e12)
+      expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(3))
+      expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(6))
+
+      await rsr.connect(addr2).transfer(addr1.address, 0)
+      expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(3))
+      expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(6))
+    })
+
+    it('should be idempotent before crossing for both hasWeights and !hasWeights', async () => {
+      await castSiphons({ from: addr1.address, to: addr2.address, weight: WEIGHT_ONE.div(2) })
+
+      await rsr.connect(owner).castSpell(upgradeSpell.address)
+      expect(await rsr.oldBal(addr1.address)).to.equal(ONE)
+      expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(4))
+      expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
+      expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
+
+      await rsr.connect(addr1).partiallyCross(addr1.address, 1e12)
+      expect(await rsr.oldBal(addr1.address)).to.equal(0)
+      expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(4))
+      expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
+      expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
+
+      await rsr.connect(addr1).partiallyCross(addr2.address, 1e12)
+      expect(await rsr.oldBal(addr1.address)).to.equal(0)
+      expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
+      expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
+
+      await rsr.connect(addr2).transfer(addr1.address, 0)
+      expect(await rsr.oldBal(addr1.address)).to.equal(0)
+      expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
+      expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
+
+      await rsr.connect(addr1).transfer(addr2.address, 0)
+      expect(await rsr.oldBal(addr1.address)).to.equal(0)
+      expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
+      expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
+    })
+
+    it('should be idempotent after crossing for both hasWeights and !hasWeights', async () => {
+      await castSiphons({ from: addr1.address, to: addr2.address, weight: WEIGHT_ONE.div(2) })
+
+      await rsr.connect(owner).castSpell(upgradeSpell.address)
+      expect(await rsr.oldBal(addr1.address)).to.equal(ONE)
+      expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(4))
+      expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
+      expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
+
+      await rsr.connect(addr2).transfer(addr1.address, 0)
+      expect(await rsr.oldBal(addr1.address)).to.equal(ONE)
+      expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(4))
+      expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
+      expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
+
+      await rsr.connect(addr1).transfer(addr2.address, 0)
+      expect(await rsr.oldBal(addr1.address)).to.equal(ONE)
+      expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(4))
+      expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
+      expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
+
+      await rsr.connect(addr1).partiallyCross(addr1.address, 1e12)
+      expect(await rsr.oldBal(addr1.address)).to.equal(ONE)
+      expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(4))
+      expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
+      expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
+
+      await rsr.connect(addr1).partiallyCross(addr2.address, 1e12)
+      expect(await rsr.oldBal(addr1.address)).to.equal(ONE)
+      expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(4))
+      expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
+      expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
+    })
+
+    it('should be idempotent between two accounts with different crossing statuses', async () => {
+      await castSiphons({ from: addr1.address, to: addr2.address, weight: WEIGHT_ONE.div(2) })
+
+      await rsr.connect(owner).castSpell(upgradeSpell.address)
+      expect(await rsr.oldBal(addr1.address)).to.equal(ONE)
+      expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(4))
+      expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
+      expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
+
+      await rsr.connect(addr2).transfer(addr1.address, 0)
+      expect(await rsr.oldBal(addr1.address)).to.equal(ONE)
+      expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(4))
+      expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
+      expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
+
+      await rsr.connect(addr1).partiallyCross(addr1.address, 1e12)
+      expect(await rsr.oldBal(addr1.address)).to.equal(0)
+      expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(4))
+      expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
+      expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
+
+      await rsr.connect(addr1).partiallyCross(addr2.address, 1e12)
+      expect(await rsr.oldBal(addr1.address)).to.equal(0)
+      expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(4))
+      expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
+      expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
+
+      await rsr.connect(addr1).transfer(addr2.address, 0)
+      expect(await rsr.oldBal(addr1.address)).to.equal(0)
+      expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(4))
+      expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
+      expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
+    })
+
+    it('should be idempotent between two accounts with different crossing statuses, other direction', async () => {
+      await castSiphons({ from: addr1.address, to: addr2.address, weight: WEIGHT_ONE.div(2) })
+
+      await rsr.connect(owner).castSpell(upgradeSpell.address)
+      expect(await rsr.oldBal(addr1.address)).to.equal(ONE)
+      expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(4))
+      expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
+      expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
+
+      await rsr.connect(addr1).transfer(addr2.address, 0)
+      expect(await rsr.oldBal(addr1.address)).to.equal(ONE)
+      expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(4))
+      expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
+      expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
+
+      await rsr.connect(addr1).partiallyCross(addr1.address, 1e12)
+      expect(await rsr.oldBal(addr1.address)).to.equal(ONE)
+      expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(4))
+      expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
+      expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
+
+      await rsr.connect(addr1).partiallyCross(addr2.address, 1e12)
+      expect(await rsr.oldBal(addr1.address)).to.equal(ONE)
+      expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
+      expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
+
+      await rsr.connect(addr2).transfer(addr1.address, 0)
+      expect(await rsr.oldBal(addr1.address)).to.equal(ONE)
+      expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
+      expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
     })
   })
 })

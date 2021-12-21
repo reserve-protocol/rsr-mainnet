@@ -130,7 +130,7 @@ contract RSR is Pausable, MageMixin, ERC20Permit {
     function partiallyCross(address dest, uint256 count) public whenNotPaused {
         if (!balCrossed[dest]) {
             while (origins[dest].length() > 0 && count > 0) {
-                address src = origins[dest].at(count - 1);
+                address src = origins[dest].at(origins[dest].length() - 1);
                 _mint(dest, (oldRSR.balanceOf(src) * weights[src][dest]) / WEIGHT_ONE);
                 origins[dest].remove(src);
                 count -= 1;
