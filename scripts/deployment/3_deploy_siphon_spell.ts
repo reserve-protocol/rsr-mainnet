@@ -11,7 +11,7 @@ let siphonSpell: SiphonSpell
 let deploymentsData: IDeployments
 
 async function main() {
-  const [alice] = await hre.ethers.getSigners()
+  const [burner] = await hre.ethers.getSigners()
   const chainId = await getChainId(hre)
 
   // Check if chain is supported
@@ -20,7 +20,7 @@ async function main() {
   }
 
   console.log(`Starting deployment on network ${hre.network.name} (${chainId})`)
-  console.log(`Deployer account: ${alice.address}\n`)
+  console.log(`Deployer account: ${burner.address}\n`)
 
   // Get RSR address and contract
   const tmpDeploymentFile = getDeploymentFilename(chainId)
@@ -37,14 +37,13 @@ async function main() {
   }
 
   /** ******************** Deploy Siphon Spell ****************************************/
-
-  // Note: For now, setting deployer account as owner to add new siphons later
   const SiphonSpellfactory = await ethers.getContractFactory('SiphonSpell')
   siphonSpell = <SiphonSpell>await SiphonSpellfactory.deploy(rsrAddr, UPGRADE_SIPHONS)
   await siphonSpell.deployed()
 
   console.log('Siphon Spell deployed to:', siphonSpell.address)
 
+  // Set value for file
   deploymentsData.siphonSpell = siphonSpell.address
 
   /**************************************************************************/

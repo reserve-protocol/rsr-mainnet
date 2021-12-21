@@ -28,12 +28,12 @@ async function main() {
   /** ******************** Verify RSR contract ****************************************/
   // Verify contract in Etherscan
   const rsrAddr: string = deploymentsData.rsr
-  const rsrPrevAddr: string = deploymentsData.oldRSR
+  const oldRSRAddr: string = deploymentsData.oldRSR
 
   console.time('Verifying RSR contract ...')
   await hre.run('verify:verify', {
     address: rsrAddr,
-    constructorArguments: [rsrPrevAddr],
+    constructorArguments: [oldRSRAddr],
     contract: 'contracts/RSR.sol:RSR',
   })
   console.timeEnd('Verifying RSR contract ...')
@@ -45,7 +45,7 @@ async function main() {
   console.time('Verifying ForkSpell contract ...')
   await hre.run('verify:verify', {
     address: forkSpellAddr,
-    constructorArguments: [rsrPrevAddr, rsrAddr],
+    constructorArguments: [oldRSRAddr, rsrAddr],
     contract: 'contracts/ForkSpell.sol:ForkSpell',
   })
   console.timeEnd('Verifying ForkSpell contract ...')

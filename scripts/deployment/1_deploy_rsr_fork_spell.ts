@@ -12,7 +12,7 @@ let forkSpell: ForkSpell
 const deploymentsData: IDeployments = { oldRSR: '', rsr: '', forkSpell: '', siphonSpell: '' }
 
 async function main() {
-  const [alice] = await hre.ethers.getSigners()
+  const [burner] = await hre.ethers.getSigners()
   const chainId = await getChainId(hre)
 
   // Check if chain is supported
@@ -29,15 +29,15 @@ async function main() {
   }
 
   console.log(`Starting deployment on network ${hre.network.name} (${chainId})`)
-  console.log(`Deployer Alice account: ${alice.address}\n`)
+  console.log(`Burner account: ${burner.address}\n`)
 
   /** ******************** Deploy RSR ****************************************/
-  // Get previous RSR Address
-  let previousRSRAddr: string
+  // Get old RSR Address
+  let oldRSRAddr: string
 
   if (networkConfig[chainId].oldRSR) {
-    previousRSRAddr = networkConfig[chainId].oldRSR as string
-    const valid: boolean = await isValidContract(hre, previousRSRAddr)
+    oldRSRAddr = networkConfig[chainId].oldRSR as string
+    const valid: boolean = await isValidContract(hre, oldRSRAddr)
     if (!valid) {
       throw new Error(`Previous RSR contract not found in network ${hre.network.name}`)
     }
@@ -56,26 +56,29 @@ async function main() {
 
   // Deploy RSR
   const RSR = await ethers.getContractFactory('RSR')
-  rsrToken = <RSR>await RSR.connect(alice).deploy(previousRSRAddr)
+  rsrToken = <RSR>await RSR.connect(burner).deploy(oldRSRAddr)
   await rsrToken.deployed()
 
   console.log('RSR deployed to:', rsrToken.address)
 
-  deploymentsData.oldRSR = previousRSRAddr
+  // Set value in file
+  deploymentsData.oldRSR = oldRSRAddr
   deploymentsData.rsr = rsrToken.address
 
   // Transfer Ownership
-  await rsrToken.connect(alice).transferOwnership(companySafeAddr)
-  await rsrToken.connect(alice).changePauser(companySafeAddr)
-
+  await rsrToken.connect(burner).changePauser(companySafeAddr)
+  await rsrToken.connect(burner).transferOwnership(companySafeAddr)
+  
   /** ******************** Deploy Fork Spell ****************************************/
   const ForkSpellFactory = await ethers.getContractFactory('ForkSpell')
-  forkSpell = <ForkSpell>await ForkSpellFactory.deploy(previousRSRAddr, rsrToken.address)
+  forkSpell = <ForkSpell>await ForkSpellFactory.deploy(oldRSRAddr, rsrToken.address)
   await forkSpell.deployed()
 
   console.log('Fork Spell deployed to:', forkSpell.address)
 
+  // Set value in file
   deploymentsData.forkSpell = forkSpell.address
+
   /**************************************************************************/
   // Write temporary deployments file
   fs.writeFileSync(tmpDeploymentFile, JSON.stringify(deploymentsData, null, 2))
