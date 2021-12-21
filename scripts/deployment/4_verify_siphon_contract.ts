@@ -1,16 +1,14 @@
-import fs from 'fs'
 import hre from 'hardhat'
 import { getChainId } from '../../common/blockchain-utils'
 import { networkConfig, developmentChains } from '../../common/configuration'
-import { IDeployments, fileExists, getDeploymentFilename } from './deployment_utils'
+import { IDeployments, getDeploymentFilename, getDeploymentFile } from './deployment_utils'
 import { UPGRADE_SIPHONS } from './siphon_config'
 
 let deploymentsData: IDeployments
 
 async function main() {
   const chainId = await getChainId(hre)
-
-  const verify: boolean = developmentChains.includes(hre.network.name) ? false : true
+  const verify = !developmentChains.includes(hre.network.name)
 
   // Check if chain is supported
   if (!networkConfig[chainId]) {
@@ -23,23 +21,16 @@ async function main() {
 
   // Check if deployment file exists for this chainId
   const tmpDeploymentFile = getDeploymentFilename(chainId)
-  if (await fileExists(tmpDeploymentFile)) {
-    const data: string = (await fs.promises.readFile(tmpDeploymentFile)).toString()
-    deploymentsData = JSON.parse(data)
-  } else {
-    throw new Error(
-      `Deployment File does not exist for network ${hre.network.name} (${chainId}). Please make sure contracts are deployed and this file is properly generated.`
-    )
-  }
+  deploymentsData = getDeploymentFile(tmpDeploymentFile, chainId)
 
   console.log(`Starting contract verification on network ${hre.network.name} (${chainId})`)
 
-  /********************** Verify Siphon Spell ****************************************/
+  /** ******************** Verify Siphon Spell ****************************************/
   // Verify contract in Etherscan
-  const rsrAddr: string = deploymentsData.rsr
-  const siphonSpellAddr: string = deploymentsData.siphonSpell
+  const rsrAddr = deploymentsData.rsr
+  const siphonSpellAddr = deploymentsData.siphonSpell
 
-  if (siphonSpellAddr != '') {
+  if (siphonSpellAddr) {
     console.time('Verifying SiphonSpell contract ...')
     await hre.run('verify:verify', {
       address: siphonSpellAddr,

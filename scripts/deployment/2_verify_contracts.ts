@@ -1,15 +1,13 @@
-import fs from 'fs'
 import hre from 'hardhat'
 import { getChainId } from '../../common/blockchain-utils'
 import { networkConfig, developmentChains } from '../../common/configuration'
-import { IDeployments, fileExists, getDeploymentFilename } from './deployment_utils'
+import { IDeployments, getDeploymentFilename, getDeploymentFile } from './deployment_utils'
 
 let deploymentsData: IDeployments
 
 async function main() {
   const chainId = await getChainId(hre)
-
-  const verify: boolean = developmentChains.includes(hre.network.name) ? false : true
+  const verify = !developmentChains.includes(hre.network.name)
 
   // Check if chain is supported
   if (!networkConfig[chainId]) {
@@ -22,18 +20,11 @@ async function main() {
 
   // Check if deployment file exists for this chainId
   const tmpDeploymentFile = getDeploymentFilename(chainId)
-  if (await fileExists(tmpDeploymentFile)) {
-    const data: string = (await fs.promises.readFile(tmpDeploymentFile)).toString()
-    deploymentsData = JSON.parse(data)
-  } else {
-    throw new Error(
-      `Deployment File does not exist for network ${hre.network.name} (${chainId}). Please make sure contracts are deployed and this file is properly generated.`
-    )
-  }
+  deploymentsData = getDeploymentFile(tmpDeploymentFile, chainId)
 
   console.log(`Starting contract verification on network ${hre.network.name} (${chainId})`)
 
-  /********************** Verify RSR contract ****************************************/
+  /** ******************** Verify RSR contract ****************************************/
   // Verify contract in Etherscan
   const rsrAddr: string = deploymentsData.rsr
   const rsrPrevAddr: string = deploymentsData.rsrPrev
@@ -46,7 +37,7 @@ async function main() {
   })
   console.timeEnd('Verifying RSR contract ...')
 
-  /********************** Verify Upgrade Spell ****************************************/
+  /** ******************** Verify Upgrade Spell ****************************************/
   // Verify contract in Etherscan
   const upgradeSpellAddr: string = deploymentsData.upgradeSpell
 

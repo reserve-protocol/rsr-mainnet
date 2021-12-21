@@ -1,21 +1,35 @@
 import fs from 'fs'
 
 export interface IDeployments {
-    rsrPrev: string
-    rsr: string
-    upgradeSpell: string
-    siphonSpell: string
-  }
-  
-const tmp_file_suffix: string = '-tmp-deployments.json'
-
-export const getDeploymentFilename = (chainId: number): string =>  {
-    return `./${chainId}${tmp_file_suffix}`;
+  rsrPrev: string
+  rsr: string
+  upgradeSpell: string
+  siphonSpell: string
 }
 
-export const fileExists = async (file: string): Promise<boolean> => {
-  return fs.promises
-    .access(file, fs.constants.F_OK)
-    .then(() => true)
-    .catch(() => false);
+const tempFileSuffix: string = '-tmp-deployments.json'
+
+export const getDeploymentFilename = (chainId: number): string => {
+  return `./${chainId}${tempFileSuffix}`
+}
+
+export const fileExists = (file: string): boolean => {
+  let flag = true
+  try {
+    fs.accessSync(file, fs.constants.F_OK)
+  } catch (e) {
+    flag = false
+  }
+
+  return flag
+}
+
+export const getDeploymentFile = (path: string, chainId: string): IDeployments => {
+  try {
+    return JSON.parse(fs.readFileSync(path, 'utf8'))
+  } catch (e) {
+    throw new Error(
+      `Deployment File does not exist for chain "${chainId}". Please make sure contracts are deployed and this file is properly generated.`
+    )
+  }
 }
