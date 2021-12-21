@@ -77,7 +77,7 @@ const deploySiphon = async (siphons = UPGRADE_SIPHONS) => {
   siphonSpell = <SiphonSpell>await SiphonSpellfactory.deploy(rsrToken.address, UPGRADE_SIPHONS)
 }
 
-describe('RSR contract - Mainnet Forking', function () {
+describe.skip('RSR contract - Mainnet Forking', function () {
   beforeEach(async () => {
     await deployContracts()
   })
