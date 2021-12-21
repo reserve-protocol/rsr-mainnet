@@ -138,7 +138,7 @@ contract RSR is Pausable, MageMixin, ERC20Permit {
         address oldTo,
         address newTo,
         uint64 weight
-    ) external onlyAdmin wehnPaused {
+    ) external onlyAdmin whenPaused {
         require(!oldRSR.paused(), "old RSR is already paused");
         _siphon(from, oldTo, newTo, weight);
     }
