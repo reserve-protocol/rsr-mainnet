@@ -138,7 +138,7 @@ contract RSR is Pausable, MageMixin, ERC20Permit {
         address oldTo,
         address newTo,
         uint64 weight
-    ) external onlyAdmin {
+    ) external onlyAdmin wehnPaused {
         require(!oldRSR.paused(), "old RSR is already paused");
         _siphon(from, oldTo, newTo, weight);
     }
@@ -166,7 +166,7 @@ contract RSR is Pausable, MageMixin, ERC20Permit {
     }
 
     /// Fill zero-addressed dust balances that were lost during migration
-    function changeBalanceAtZeroAddress(int256 amount) external onlyOwner {
+    function changeBalanceAtZeroAddress(int256 amount) external onlyAdmin {
         if (amount > 0) {
             _mint(address(1), uint256(amount));
         } else if (amount < 0) {
