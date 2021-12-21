@@ -66,6 +66,7 @@ async function main() {
 
   // Transfer Ownership
   await rsrToken.connect(alice).transferOwnership(companySafeAddr)
+  await rsrToken.connect(alice).changePauser(companySafeAddr)
 
   /** ******************** Deploy Fork Spell ****************************************/
   const ForkSpellFactory = await ethers.getContractFactory('ForkSpell')
