@@ -5,7 +5,7 @@ import { BigNumberish, ContractFactory } from 'ethers'
 import { ethers } from 'hardhat'
 
 import { bn, ONE, ZERO } from '../common/numbers'
-import { ERC20Mock, ForkSpell, ReserveRightsTokenMock, RSR, RSRMock, SiphonSpell } from '../typechain'
+import { ERC20Mock, ForkSpell, ReserveRightsTokenMock, RSRMock, SiphonSpell } from '../typechain'
 
 let owner: SignerWithAddress
 let addr1: SignerWithAddress
@@ -76,7 +76,7 @@ describe('RSR contract', () => {
       await oldRSR.connect(owner).pause()
       await expect(
         rsr.connect(owner).siphon(ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, WEIGHT_ONE)
-      ).to.be.revertedWith('old RSR is already paused')
+      ).to.be.revertedWith('OldRSR is already paused')
     })
 
     it('dont allow siphon if from is the zero address', async () => {
