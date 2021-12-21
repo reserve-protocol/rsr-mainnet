@@ -201,6 +201,16 @@ describe('RSR contract', () => {
         rsr.connect(owner).siphon(addr1.address, addr1.address, addr2.address, WEIGHT_ONE)
       ).to.be.revertedWith('weight too big')
     })
+
+    it('should revert when trying to unpause if token is not paused or owner is not the zero address', async () => {
+      await expect(rsr.connect(owner).unpause()).to.be.revertedWith('waiting for oldRSR to pause')
+      await oldRSR.connect(owner).pause()
+      await expect(rsr.connect(owner).unpause()).to.be.revertedWith('owner must be set to zero')
+    })
+
+    it('should not allow pausing if the owner is not admin or pauser', async () => {
+      await expect(rsr.connect(addr1).pause()).to.be.revertedWith('only pauser, regent, or owner')
+    })
   })
 
   describe('The Upgrade', () => {
