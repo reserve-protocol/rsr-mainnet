@@ -15,13 +15,18 @@ import "./MageMixin.sol";
 contract RSR is Pausable, Ownable, MageMixin, ERC20Permit {
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    event PauserChanged(address indexed oldPauser, address newPauser);
-
     ERC20Pausable public immutable oldRSR;
-    uint64 public constant WEIGHT_ONE = 1e18;
-    /// A uint64 value `w` is a _weight_, and it represents the fractional value `w / WEIGHT_ONE`.
 
+    /// weight scale
+    /// A uint64 value `w` is a _weight_, and it represents the fractional value `w / WEIGHT_ONE`.
+    uint64 public constant WEIGHT_ONE = 1e18;
+
+    /// Note that due to lost dust crossing, it's possible sum(_balances) < fixedSupply
     uint256 private immutable fixedSupply;
+
+    /// Pausing
+    event PauserChanged(address indexed oldPauser, address newPauser);
+    address public pauser;
 
     /** @dev
     Relative Immutability
@@ -38,7 +43,9 @@ contract RSR is Pausable, Ownable, MageMixin, ERC20Permit {
     to true.
     */
 
-    address public pauser;
+    /// weights: map(OldRSR addr -> RSR addr -> uint64 weight)
+    /// weights[A][B] is the fraction of A's old balance that should be forwarded to B.
+    mapping(address => mapping(address => uint64)) public weights;
 
     /// Invariant: For all addresses A,
     /// if !hasWeights[A], then for all B, weights[A][B] == 0
@@ -49,23 +56,15 @@ contract RSR is Pausable, Ownable, MageMixin, ERC20Permit {
     /// If hasWeights[A], then A's balances should be forwarded as by weights[A][_]
     mapping(address => bool) public hasWeights;
 
-    /// weights: map(OldRSR addr -> RSR addr -> uint64 weight)
-    /// weights[A][B] is the fraction of A's old balance that should be forwarded to B.
-    ///
-    /// (Again, with the caveat of hasWeights; if weights[A][B] == 0 for all B, then
-    ///  hasWeights[A] = false, and A's old balance should just stay where it is!)
-    mapping(address => mapping(address => uint64)) public weights;
-
     /// Invariant: For all A and B, if weights[A][B] > 0, then A is in origins[B]
     ///
     /// origins: map(RSR addr -> set(OldRSR addr))
     mapping(address => EnumerableSet.AddressSet) private origins;
 
-    /// balCrossed[A]: true iff we've already crossed oldRSR balances into this._balances[A]
+    /// balCrossed[A]: true iff address A has already crossed
     mapping(address => bool) public balCrossed;
 
-    /// allowanceCrossed[A][B]: true iff we've already crossed the oldRSR allowance into
-    ///   this._allowance[A][B].
+    /// allowanceCrossed[A][B]: true iff oldRSR.allowances[A][B] has crossed
     mapping(address => mapping(address => bool)) public allowanceCrossed;
 
     /** @dev A few mathematical functions, so we can be really precise here:
@@ -78,8 +77,8 @@ contract RSR is Pausable, Ownable, MageMixin, ERC20Permit {
     For all addresses A:
     - If OldRSR is not yet paused, balCrossed[A] is false.
     - Once balCrossed[A] is true, it stays true forever.
-    - balanceOf(A) == this._balances[A] + (balCrossed[A} ? inheritedBalance(A) : 0)
-    - balanceOf satisfies all the usual rules for ERC20 tokens.
+    - balanceOf(A) == this._balances[A] + (balCrossed[A] ? inheritedBalance(A) : 0)
+    - balanceOf a specific account satisfies all the usual rules for ERC20 tokens.
 
     Properties of allowances:
 
@@ -95,11 +94,6 @@ contract RSR is Pausable, Ownable, MageMixin, ERC20Permit {
         fixedSupply = ERC20Pausable(oldRSR_).totalSupply();
         pauser = _msgSender();
         _pause();
-    }
-
-    modifier notToThis(address to) {
-        require(to != address(this), "no transfers to this token address");
-        _;
     }
 
     modifier ensureBalCrossed(address from) {
@@ -126,41 +120,7 @@ contract RSR is Pausable, Ownable, MageMixin, ERC20Permit {
         _;
     }
 
-    /// Partially crosses an account that has weights some number of steps.
-    /// Calling this function should not impact final balances after crossing.
-    function partiallyCross(address dest, uint256 count) public whenNotPaused {
-        if (!balCrossed[dest]) {
-            while (origins[dest].length() > 0 && count > 0) {
-                address src = origins[dest].at(origins[dest].length() - 1);
-                _mint(dest, (oldRSR.balanceOf(src) * weights[src][dest]) / WEIGHT_ONE);
-                origins[dest].remove(src);
-                count -= 1;
-            }
-        }
-    }
-
-    // ========================= Admin =========================
-    // Note: The owner should be set to the zero address by the time the old RSR is paused
-
-    /// Moves weight from old->prev to old->to
-    /// @param from The address that has the balance on OldRSR
-    /// @param oldTo The receiving address to siphon tokens away from
-    /// @param newTo The receiving address to siphon tokens towards
-    /// @param weight A uint between 0 and the current old->prev weight, max WEIGHT_ONE
-    function siphon(
-        address from,
-        address oldTo,
-        address newTo,
-        uint64 weight
-    ) external onlyAdmin whenPaused {
-        require(!oldRSR.paused(), "old RSR is already paused");
-        _siphon(from, oldTo, newTo, weight);
-    }
-
-    /// Renounce all ownership of RSR, callable by the Regent / Owner
-    function renounceOwnership() public override onlyAdmin {
-        _transferOwnership(address(0));
-    }
+    // ========================= Governance =========================
 
     /// Pause ERC20 + ERC2612 functions
     function pause() external onlyAdminOrPauser {
@@ -179,16 +139,52 @@ contract RSR is Pausable, Ownable, MageMixin, ERC20Permit {
         pauser = newPauser;
     }
 
-    // ========================= After Old RSR is Paused =============================
+    /// Renounce all ownership of RSR, callable by the Regent / Owner
+    function renounceOwnership() public override onlyAdmin {
+        _transferOwnership(address(0));
+    }
+
+    // ========================= Weight Management =========================
+
+    /// Moves weight from old->prev to old->to
+    /// @param from The address that has the balance on OldRSR
+    /// @param oldTo The receiving address to siphon tokens away from
+    /// @param newTo The receiving address to siphon tokens towards
+    /// @param weight A uint between 0 and the current old->prev weight, max WEIGHT_ONE
+    function siphon(
+        address from,
+        address oldTo,
+        address newTo,
+        uint64 weight
+    ) external onlyAdmin whenPaused {
+        require(!oldRSR.paused(), "old RSR is already paused");
+        _siphon(from, oldTo, newTo, weight);
+    }
+
+    /// Partially crosses an account that has weights some number of steps.
+    /// Calling this function should not impact final balances after crossing.
+    function partiallyCross(address dest, uint256 count) public whenNotPaused {
+        if (!balCrossed[dest]) {
+            while (origins[dest].length() > 0 && count > 0) {
+                address src = origins[dest].at(origins[dest].length() - 1);
+                _mint(dest, (oldRSR.balanceOf(src) * weights[src][dest]) / WEIGHT_ONE);
+                weights[src][dest] = 0;
+                origins[dest].remove(src);
+                count -= 1;
+            }
+        }
+    }
+
+    // ========================= ERC20 + ERC2612 ==============================
 
     function transfer(address recipient, uint256 amount)
         public
         override
         whenNotPaused
-        notToThis(recipient)
         ensureBalCrossed(_msgSender())
         returns (bool)
     {
+        require(recipient != address(this), "no transfers to this token address");
         return super.transfer(recipient, amount);
     }
 
@@ -200,11 +196,11 @@ contract RSR is Pausable, Ownable, MageMixin, ERC20Permit {
         public
         override
         whenNotPaused
-        notToThis(recipient)
         ensureBalCrossed(sender)
         ensureAllowanceCrossed(sender, recipient)
         returns (bool)
     {
+        require(recipient != address(this), "no transfers to this token address");
         return super.transferFrom(sender, recipient, amount);
     }
 
