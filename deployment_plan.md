@@ -84,7 +84,7 @@ TODO: Iterate through this plan, and specify with clarity the specific condition
     * RSR.paused() is false
     * RSR.regent() is 0
     * RSR.owner() is 0
-    * RSR.isPauser(CompanySafe) is true
+    * RSR.pauser() is CompanySafe
     * oldRSR.paused() is true
     * The balance checks from Phase 3 all work.
 
