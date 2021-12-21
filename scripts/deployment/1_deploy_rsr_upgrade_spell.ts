@@ -1,14 +1,15 @@
 import fs from 'fs'
 import hre, { ethers } from 'hardhat'
+
 import { getChainId, isValidContract } from '../../common/blockchain-utils'
 import { networkConfig } from '../../common/configuration'
-import { IDeployments, fileExists, getDeploymentFilename } from './deployment_utils'
 import { RSR, UpgradeSpell } from '../../typechain'
+import { fileExists, getDeploymentFilename, IDeployments } from './deployment_utils'
 
 let rsrToken: RSR
 let upgradeSpell: UpgradeSpell
 
-const deploymentsData: IDeployments = { rsrPrev: '', rsr: '', upgradeSpell: '', siphonSpell: '' }
+const deploymentsData: IDeployments = { oldRSR: '', rsr: '', upgradeSpell: '', siphonSpell: '' }
 
 async function main() {
   const [alice] = await hre.ethers.getSigners()
@@ -34,8 +35,8 @@ async function main() {
   // Get previous RSR Address
   let previousRSRAddr: string
 
-  if (networkConfig[chainId].rsrPrev) {
-    previousRSRAddr = networkConfig[chainId].rsrPrev as string
+  if (networkConfig[chainId].oldRSR) {
+    previousRSRAddr = networkConfig[chainId].oldRSR as string
     const valid: boolean = await isValidContract(hre, previousRSRAddr)
     if (!valid) {
       throw new Error(`Previous RSR contract not found in network ${hre.network.name}`)
@@ -60,7 +61,7 @@ async function main() {
 
   console.log('RSR deployed to:', rsrToken.address)
 
-  deploymentsData.rsrPrev = previousRSRAddr
+  deploymentsData.oldRSR = previousRSRAddr
   deploymentsData.rsr = rsrToken.address
 
   // Transfer Ownership

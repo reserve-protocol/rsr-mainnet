@@ -1,7 +1,8 @@
 import hre from 'hardhat'
+
 import { getChainId } from '../../common/blockchain-utils'
-import { networkConfig, developmentChains } from '../../common/configuration'
-import { IDeployments, getDeploymentFilename, getDeploymentFile } from './deployment_utils'
+import { developmentChains, networkConfig } from '../../common/configuration'
+import { getDeploymentFile, getDeploymentFilename, IDeployments } from './deployment_utils'
 
 let deploymentsData: IDeployments
 
@@ -27,7 +28,7 @@ async function main() {
   /** ******************** Verify RSR contract ****************************************/
   // Verify contract in Etherscan
   const rsrAddr: string = deploymentsData.rsr
-  const rsrPrevAddr: string = deploymentsData.rsrPrev
+  const rsrPrevAddr: string = deploymentsData.oldRSR
 
   console.time('Verifying RSR contract ...')
   await hre.run('verify:verify', {

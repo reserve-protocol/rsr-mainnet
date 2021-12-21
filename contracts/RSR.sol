@@ -89,9 +89,9 @@ contract RSR is Pausable, MageMixin, ERC20Permit {
     - allowance satisfies all the usual rules for ERC20 tokens.
     */
 
-    constructor(address prevRSR_) ERC20("Reserve Rights", "RSR") ERC20Permit("Reserve Rights") {
-        oldRSR = ERC20Pausable(prevRSR_);
-        fixedSupply = ERC20Pausable(prevRSR_).totalSupply();
+    constructor(address oldRSR_) ERC20("Reserve Rights", "RSR") ERC20Permit("Reserve Rights") {
+        oldRSR = ERC20Pausable(oldRSR_);
+        fixedSupply = ERC20Pausable(oldRSR_).totalSupply();
         pauser = _msgSender();
         _pause();
     }

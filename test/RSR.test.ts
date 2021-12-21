@@ -17,7 +17,6 @@ let UpgradeSpellFactory: ContractFactory
 let upgradeSpell: UpgradeSpell
 let rsr: RSRMock
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
-const ONE_ADDRESS = '0x0000000000000000000000000000000000000001'
 const WEIGHT_ONE = bn('1e18')
 
 async function setInitialBalances() {

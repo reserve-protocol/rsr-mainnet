@@ -2,16 +2,16 @@ import { JsonRpcSigner } from '@ethersproject/providers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { expect } from 'chai'
 import { BigNumber } from 'ethers'
-
 import hre, { ethers } from 'hardhat'
+
 import { MultiSigWalletWithDailyLimit } from '../../typechain/MultiSigWalletWithDailyLimit'
 import { ReserveRightsToken } from '../../typechain/ReserveRightsToken'
 import { RSR } from '../../typechain/RSR'
+import { SiphonSpell } from '../../typechain/SiphonSpell'
 import { SlowWallet } from '../../typechain/SlowWallet'
 import { UpgradeSpell } from '../../typechain/UpgradeSpell'
-import { impersonate } from './utils/accounts'
 import { UPGRADE_SIPHONS } from './../../scripts/deployment/siphon_config'
-import { SiphonSpell } from '../../typechain/SiphonSpell'
+import { impersonate } from './utils/accounts'
 
 // Relevant addresses (Mainnet)
 const RSR_PREVIOUS_ADDRESS = '0x8762db106b2c2a0bccb3a80d1ed41273552616e8'
@@ -26,7 +26,7 @@ let companySafeAddress: SignerWithAddress
 let pauser: JsonRpcSigner
 let holder: JsonRpcSigner
 
-let prevRSR: ReserveRightsToken
+let oldRSR: ReserveRightsToken
 let slowWallet: SlowWallet
 let multisigWallet: MultiSigWalletWithDailyLimit
 let rsrToken: RSR
@@ -50,7 +50,7 @@ const deployContracts = async () => {
   })
 
   // Retrieve Deployed contracts
-  prevRSR = <ReserveRightsToken>(
+  oldRSR = <ReserveRightsToken>(
     await ethers.getContractAt('ReserveRightsToken', RSR_PREVIOUS_ADDRESS)
   )
   slowWallet = <SlowWallet>await ethers.getContractAt('SlowWallet', SLOW_WALLET)
@@ -64,11 +64,11 @@ const deployContracts = async () => {
 
   // Deploy new RSR
   const RSR = await ethers.getContractFactory('RSR')
-  rsrToken = <RSR>await RSR.connect(owner).deploy(prevRSR.address)
+  rsrToken = <RSR>await RSR.connect(owner).deploy(oldRSR.address)
 
   // Deploy upgrade spell
   const UpgradeSpellFactory = await ethers.getContractFactory('UpgradeSpell')
-  upgradeSpell = <UpgradeSpell>await UpgradeSpellFactory.deploy(prevRSR.address, rsrToken.address)
+  upgradeSpell = <UpgradeSpell>await UpgradeSpellFactory.deploy(oldRSR.address, rsrToken.address)
 }
 
 // @comment: contract deployment required before deploying siphons
@@ -84,14 +84,12 @@ describe.skip('RSR contract - Mainnet Forking', function () {
 
   describe('Before upgrade', async () => {
     it('Should start with the total supply of previous RSR', async function () {
-      const totalSupplyPrev = await prevRSR.totalSupply()
+      const totalSupplyPrev = await oldRSR.totalSupply()
       expect(await rsrToken.totalSupply()).to.equal(totalSupplyPrev)
     })
   })
 
-  describe('Upgrade period', async () => {
-
-  })
+  describe('Upgrade period', async () => {})
 
   describe('After upgrade', () => {
     beforeEach(async () => {
@@ -103,10 +101,10 @@ describe.skip('RSR contract - Mainnet Forking', function () {
     it('Should return balances from previous RSR if not crossed', async function () {
       // Compare balances between contracts
       expect(await rsrToken.balanceOf(HOLDER_ADDRESS)).to.equal(
-        await prevRSR.balanceOf(HOLDER_ADDRESS)
+        await oldRSR.balanceOf(HOLDER_ADDRESS)
       )
       expect(await rsrToken.balanceOf(addr1.address)).to.equal(
-        await prevRSR.balanceOf(addr1.address)
+        await oldRSR.balanceOf(addr1.address)
       )
 
       // Ensure no tokens were crossed
@@ -142,7 +140,7 @@ describe.skip('RSR contract - Mainnet Forking', function () {
       holder = await impersonate(HOLDER_ADDRESS)
 
       // Pause previous contract
-      await prevRSR.connect(pauser).pause()
+      await oldRSR.connect(pauser).pause()
 
       // Renounce ownership of new RSR
       await rsrToken.connect(owner).renounceOwnership()
