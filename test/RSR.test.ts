@@ -92,20 +92,6 @@ describe('RSR contract', () => {
       ).to.be.revertedWith('only regent or owner')
     })
 
-    it('should allow changing balance at address one (owner only)', async () => {
-      await expect(rsr.connect(addr1).tweakDust(ONE)).to.be.revertedWith('only regent or owner')
-
-      await expect(rsr.connect(owner).tweakDust(ONE))
-        .to.emit(rsr, 'Transfer')
-        .withArgs(ZERO_ADDRESS, ONE_ADDRESS, ONE)
-      await expect(rsr.connect(owner).tweakDust(bn('-1e18').div(2)))
-        .to.emit(rsr, 'Transfer')
-        .withArgs(ONE_ADDRESS, ZERO_ADDRESS, ONE.div(2))
-      // do nothing if amount is zero (coverage purposes)
-      await expect(rsr.connect(owner).tweakDust(ZERO)).to.not.emit(rsr, 'Transfer')
-      expect(await rsr.balanceOf(ONE_ADDRESS)).to.eq(ONE.div(2))
-    })
-
     it('should not allow RSR transfers or approvals until oldRSR is paused', async () => {
       const permit = await signERC2612Permit(
         ethers.provider,

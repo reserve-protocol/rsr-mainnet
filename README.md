@@ -13,6 +13,11 @@ We have two spells, currently:
 - SiphonSpell: For performing a series of RSR siphons in a single tx. 
 - UpgradeSpell: For completing the upgrade to RSR
 
+## Nuance: Total Supply
+
+The total supply of new RSR is fixed at 100 billion. However, due to rounding during crossings, it is possible for the sum of all balances on new RSR to be less than this amount. The delta is on the order of quanta RSR, and may even end up being 0 if there are no complicated siphons. 
+
+
 ## TODO 
 
 Relatively incomplete instructions for developers to setup, configuration, and use the tools in this repository.
