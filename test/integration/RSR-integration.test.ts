@@ -2,13 +2,13 @@ import { JsonRpcSigner } from '@ethersproject/providers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { expect } from 'chai'
 import { BigNumber } from 'ethers'
-import { ethers } from 'hardhat'
-import hre from 'hardhat'
 
+import hre, { ethers } from 'hardhat'
 import { MultiSigWalletWithDailyLimit } from '../../typechain/MultiSigWalletWithDailyLimit'
 import { ReserveRightsToken } from '../../typechain/ReserveRightsToken'
 import { RSR } from '../../typechain/RSR'
 import { SlowWallet } from '../../typechain/SlowWallet'
+import { UpgradeSpell } from '../../typechain/UpgradeSpell'
 import { impersonate } from './utils/accounts'
 
 // Relevant addresses (Mainnet)
@@ -21,7 +21,7 @@ const HOLDER_ADDRESS = '0x72A53cDBBcc1b9efa39c834A540550e23463AAcB'
 describe('RSR contract - Mainnet Forking', function () {
   let owner: SignerWithAddress
   let addr1: SignerWithAddress
-  let addr2: SignerWithAddress
+  let companySafeAddress: SignerWithAddress
   let pauser: JsonRpcSigner
   let holder: JsonRpcSigner
 
@@ -29,9 +29,10 @@ describe('RSR contract - Mainnet Forking', function () {
   let slowWallet: SlowWallet
   let multisigWallet: MultiSigWalletWithDailyLimit
   let rsrToken: RSR
+  let upgradeSpell: UpgradeSpell
 
   beforeEach(async function () {
-    ;[owner, addr1, addr2] = await ethers.getSigners()
+    ;[owner, addr1, companySafeAddress] = await ethers.getSigners()
 
     // Use Mainnet fork
     await hre.network.provider.request({
@@ -62,6 +63,10 @@ describe('RSR contract - Mainnet Forking', function () {
     // Deploy new RSR
     const RSR = await ethers.getContractFactory('RSR')
     rsrToken = <RSR>await RSR.connect(owner).deploy(prevRSR.address)
+
+    // Deploy upgrade spell
+    const UpgradeSpellFactory = await ethers.getContractFactory('UpgradeSpell')
+    upgradeSpell = <UpgradeSpell>await UpgradeSpellFactory.deploy(prevRSR.address, rsrToken.address)
   })
 
   describe('Deployment', function () {
@@ -108,21 +113,17 @@ describe('RSR contract - Mainnet Forking', function () {
   })
 
   describe('Balances and Transfers - After Pausing Previous RSR', function () {
-    let totalSupply: BigNumber
-
     beforeEach(async function () {
       // Impersonate Accounts
       pauser = await impersonate(RSR_PAUSER_ADDRESS)
       holder = await impersonate(HOLDER_ADDRESS)
 
       // Pause previous contract
-      await prevRSR.connect(pauser).pause({})
+      await prevRSR.connect(pauser).pause()
 
       // Renounce ownership of new RSR
       await rsrToken.connect(owner).renounceOwnership()
       await rsrToken.connect(owner).unpause()
-
-      totalSupply = await rsrToken.totalSupply()
     })
 
     it('Should transfer tokens between accounts and cross sender', async function () {

@@ -1,6 +1,5 @@
 import fs from 'fs'
-import { ethers } from 'hardhat'
-import hre from 'hardhat'
+import hre, { ethers } from 'hardhat'
 import { getChainId, isValidContract } from '../../common/blockchain-utils'
 import { networkConfig } from '../../common/configuration'
 import { IDeployments, fileExists, getDeploymentFilename } from './deployment_utils'
@@ -22,7 +21,7 @@ async function main() {
 
   // Check if deployment file already exists for this chainId
   const tmpDeploymentFile = getDeploymentFilename(chainId)
-  if (await fileExists(tmpDeploymentFile)) {
+  if (fileExists(tmpDeploymentFile)) {
     throw new Error(
       `File already exists for network ${hre.network.name} (${chainId}). Please delete this file and run again if required.`
     )
@@ -31,7 +30,7 @@ async function main() {
   console.log(`Starting deployment on network ${hre.network.name} (${chainId})`)
   console.log(`Deployer Alice account: ${alice.address}\n`)
 
-  /********************** Deploy RSR ****************************************/
+  /** ******************** Deploy RSR ****************************************/
   // Get previous RSR Address
   let previousRSRAddr: string
 
@@ -66,8 +65,8 @@ async function main() {
 
   // Transfer Ownership
   await rsrToken.connect(alice).transferOwnership(companySafeAddr)
-  
-  /********************** Deploy Upgrade Spell ****************************************/
+
+  /** ******************** Deploy Upgrade Spell ****************************************/
   const UpgradeSpellFactory = await ethers.getContractFactory('UpgradeSpell')
   upgradeSpell = <UpgradeSpell>await UpgradeSpellFactory.deploy(previousRSRAddr, rsrToken.address)
   await upgradeSpell.deployed()
@@ -77,10 +76,7 @@ async function main() {
   deploymentsData.upgradeSpell = upgradeSpell.address
   /**************************************************************************/
   // Write temporary deployments file
-  await fs.promises.writeFile(
-    tmpDeploymentFile,
-    JSON.stringify(deploymentsData, null, 2)
-  )
+  fs.writeFileSync(tmpDeploymentFile, JSON.stringify(deploymentsData, null, 2))
 
   /**************************************************************************/
 
