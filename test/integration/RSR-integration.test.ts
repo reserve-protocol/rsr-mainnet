@@ -1,4 +1,3 @@
-import { UpgradeSpell } from './../../typechain/UpgradeSpell.d';
 import { JsonRpcSigner } from '@ethersproject/providers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { expect } from 'chai'
@@ -9,6 +8,7 @@ import { MultiSigWalletWithDailyLimit } from '../../typechain/MultiSigWalletWith
 import { ReserveRightsToken } from '../../typechain/ReserveRightsToken'
 import { RSR } from '../../typechain/RSR'
 import { SlowWallet } from '../../typechain/SlowWallet'
+import { UpgradeSpell } from '../../typechain/UpgradeSpell'
 import { impersonate } from './utils/accounts'
 
 // Relevant addresses (Mainnet)
@@ -99,7 +99,7 @@ describe('RSR contract - Mainnet Forking', function () {
 
       // Attempt to  transfer
       await expect(rsrToken.connect(holder).transfer(addr1.address, amount)).to.be.revertedWith(
-        'waiting for oldRSR to pause'
+        'Pausable: paused'
       )
 
       // Balances remain unchanged
@@ -122,7 +122,8 @@ describe('RSR contract - Mainnet Forking', function () {
       await prevRSR.connect(pauser).pause()
 
       // Renounce ownership of new RSR
-      await rsrToken.connect(owner).transferOwnership(companySafeAddress.address)
+      await rsrToken.connect(owner).renounceOwnership()
+      await rsrToken.connect(owner).unpause()
     })
 
     it('Should transfer tokens between accounts and cross sender', async function () {
