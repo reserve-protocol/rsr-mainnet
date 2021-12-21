@@ -23,7 +23,7 @@ contract ForkSpell is Spell {
     }
 
     /// Pause old RSR, renounce ownership, + unpause new RSR
-    function cast() external override onlyRSR onceOnly {
+    function spell() internal override {
         oldRSR.pause();
         rsr.renounceOwnership();
         rsr.unpause();

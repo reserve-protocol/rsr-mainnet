@@ -2,10 +2,7 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-
-interface ISpell {
-    function cast() external;
-}
+import "./Spell.sol";
 
 /**
  * @title MageMixin
@@ -27,7 +24,7 @@ abstract contract MageMixin is Ownable {
     }
 
     /// Grants regent to an Spell, casts the spell, and restore regent
-    function castSpell(ISpell spell) external onlyOwner {
+    function castSpell(Spell spell) external onlyOwner {
         _grantRegent(address(spell));
         spell.cast();
         _grantRegent(address(0));

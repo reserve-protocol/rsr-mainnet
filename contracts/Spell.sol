@@ -5,31 +5,24 @@ import "./RSR.sol";
 
 /**
  * @title Spell
- * @dev A one-time-use atomic sequence of actions, used by RSR for contract changes.
+ * @dev A one-time-use atomic sequence of actions, hasBeenCast by RSR for contract changes.
  */
 abstract contract Spell {
     RSR public immutable rsr;
 
-    /// Invariant
-    /// Once set to true, remains true
-    bool public casted;
+    bool public hasBeenCast;
 
     constructor(RSR rsr_) {
         rsr = rsr_;
     }
 
-    modifier onlyRSR() {
+    function cast() external {
         require(msg.sender == address(rsr), "rsr only");
-        _;
+        require(!hasBeenCast, "spell already cast");
+        hasBeenCast = true;
+        spell();
     }
 
-    modifier onceOnly() {
-        require(!casted, "spell already cast");
-        casted = true;
-        _;
-    }
-
-    /// @dev Overriders should preface their call with the modifiers as well, or super
-    // solhint-disable-next-line
-    function cast() external virtual onlyRSR onceOnly {}
+    /// A derived Spell overrides spell() to enact its intended effects.
+    function spell() internal virtual;
 }
