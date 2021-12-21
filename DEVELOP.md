@@ -77,10 +77,10 @@ FORK=true npx hardhat node
 
 * In a separate terminal you will need to run the following scripts:
 
-- Run the script which deploys the *RSR* and *UpgradeSpell* contracts. Make sure the previous RSR address is properly configured in `common\configuration.ts` with the Mainnet address. 
+- Run the script which deploys the *RSR* and *ForkSpell* contracts. Make sure the previous RSR address is properly configured in `common\configuration.ts` with the Mainnet address. 
 
 ```bash
-npx hardhat run scripts/deployment/1_deploy_rsr_upgrade_spell.ts --network localhost
+npx hardhat run scripts/deployment/1_deploy_rsr_fork_spell.ts --network localhost
 ```
 
 This will create a local `31337-tmp-deployments.json` file with the corresponding addresses. Do not delete or modify this file as it wil be used for later scripts.

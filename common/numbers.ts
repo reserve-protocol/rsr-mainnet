@@ -1,5 +1,5 @@
 /* eslint-disable node/no-unsupported-features/es-syntax */
-import { BigNumberish, BigNumber } from 'ethers'
+import { BigNumber, BigNumberish } from 'ethers'
 
 export const SCALE_DECIMALS = 18
 

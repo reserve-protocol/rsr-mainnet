@@ -1,8 +1,4 @@
 
-
-
-TODO: Iterate through this plan, and specify with clarity the specific conditions that should be verified at each point.
-
 # Names 
 
 ## Keys
@@ -21,24 +17,29 @@ TODO: Iterate through this plan, and specify with clarity the specific condition
 ### Phase 1
 **When?** The first convenient time after our contracts are back from audit, and we've acted on all issues they've suggested.
 
-1. As a Burner, run a Hardhat script to:
+1. As a Burner, run a Hardhat script (`1_deploy_rsr_fork_spell.ts`) to:
     1. Deploy RSR 
-    2. Call RSR.transferOwnership(CompanySafe)
-    3. Deploy ForkSpell
+    2. Call RSR.changePauser(CompanySafe)
+    3. Call RSR.transferOwnership(CompanySafe)
+    4. Deploy ForkSpell
 
-2. Via a Hardhat script, verify the RSR and ForkSpell contracts on Etherscan.
+2. Via a Hardhat script (`2_verify_contracts.ts`), verify the RSR and ForkSpell contracts on Etherscan.
 
 3. Check on Etherscan to ensure that:
     * The new RSR and new ForkSpell have the addresses we expect (and record them here!)
     * RSR.oldRSR() is oldRSR
-    * RSR.fixedSupply is 100,000,000,000
+    * RSR.totalSupply() is 100,000,000,000
     * RSR.owner() is CompanySafe
+    * RSR.pauser() is CompanySafe
     * RSR.balanceOf(A) = oldRSR.balanceOf(A), for at least one address A with nonzero balances.
+    * Confirm ForkSpell.rsr() is RSR address
 
 ### Phase 2
 **When?**  The earliest convenient time to use OldPauser after Phase 1.
 
-1. As OldPauser, via Etherscan, call OldRSR.addPauser(ForkSpell).
+1. As OldPauser, via Etherscan, call:
+    * OldRSR.addPauser(ForkSpell).
+    * OldRSR.addPauser(CompanySafe).
 
 2. Check on Etherscan to ensure that:
     * oldRSR.isPauser(ForkSpell) is true
@@ -48,13 +49,14 @@ TODO: Iterate through this plan, and specify with clarity the specific condition
 ### Phase 3
 - **When?** Just after Last Call.
 
-1. As a Burner, via a Hardhat script, deploy the most up-to-date SiphonSpell.
+1. As a Burner, via a Hardhat script (`3_deploy_siphon_spell.ts`), deploy the most up-to-date SiphonSpell.
 
-2. Via a Hardhat script, verify the SiphonSpell on Etherscan.
+2. Via a Hardhat script (`4_verify_siphon_contract.ts`), verify the SiphonSpell on Etherscan.
 
 3. Check on Etherscan to ensure that:
     * SiphonSpell.siphons(x) is what we expect, for at least the values 0, 1, 7, N-1, N, where N is the total number of siphons we intended to initialize the spell with.
-   
+    * Confirm SiphonSpell.rsr() is RSR address
+
 4. As CompanySafe, via the Gnosis Safe interface, cast the SiphonSpell.
     * (Remember that CompanySafe transactions require multiple signers!)
 
@@ -86,7 +88,9 @@ TODO: Iterate through this plan, and specify with clarity the specific condition
     * RSR.owner() is 0
     * RSR.pauser() is CompanySafe
     * oldRSR.paused() is true
-    * The balance checks from Phase 3 all work.
+    * The balance checks from Phase 3 all work, as long as the addresses have not been crossed since fork
+
+3. Perform a void self-transfer for an address with balance
 
 # Long-lived State
 

@@ -9,19 +9,20 @@ interface IPausable {
     function pause() external;
 }
 
-/*
- * @title UpgradeSpell
- * @dev A one-time-use series of commands to finalize the upgrade to RSR.
+/**
+ * @title ForkSpell
+ * @dev A one-time-use series of commands to finalize the fork to upgraded RSR.
  *
  * This contract must be the pauser of `oldRSR` and regent of `rsr`
  */
-contract UpgradeSpell is Spell {
+contract ForkSpell is Spell {
     IPausable public immutable oldRSR;
 
     constructor(IPausable oldRSR_, RSR rsr_) Spell(rsr_) {
         oldRSR = oldRSR_;
     }
 
+    /// Pause old RSR, renounce ownership, + unpause new RSR
     function cast() external override onlyRSR onceOnly {
         oldRSR.pause();
         rsr.renounceOwnership();

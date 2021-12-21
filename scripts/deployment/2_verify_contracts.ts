@@ -1,7 +1,8 @@
 import hre from 'hardhat'
+
 import { getChainId } from '../../common/blockchain-utils'
-import { networkConfig, developmentChains } from '../../common/configuration'
-import { IDeployments, getDeploymentFilename, getDeploymentFile } from './deployment_utils'
+import { developmentChains, networkConfig } from '../../common/configuration'
+import { getDeploymentFile, getDeploymentFilename, IDeployments } from './deployment_utils'
 
 let deploymentsData: IDeployments
 
@@ -27,33 +28,33 @@ async function main() {
   /** ******************** Verify RSR contract ****************************************/
   // Verify contract in Etherscan
   const rsrAddr: string = deploymentsData.rsr
-  const rsrPrevAddr: string = deploymentsData.rsrPrev
+  const oldRSRAddr: string = deploymentsData.oldRSR
 
   console.time('Verifying RSR contract ...')
   await hre.run('verify:verify', {
     address: rsrAddr,
-    constructorArguments: [rsrPrevAddr],
+    constructorArguments: [oldRSRAddr],
     contract: 'contracts/RSR.sol:RSR',
   })
   console.timeEnd('Verifying RSR contract ...')
 
-  /** ******************** Verify Upgrade Spell ****************************************/
+  /** ******************** Verify Fork Spell ****************************************/
   // Verify contract in Etherscan
-  const upgradeSpellAddr: string = deploymentsData.upgradeSpell
+  const forkSpellAddr: string = deploymentsData.forkSpell
 
-  console.time('Verifying UpgradeSpell contract ...')
+  console.time('Verifying ForkSpell contract ...')
   await hre.run('verify:verify', {
-    address: upgradeSpellAddr,
-    constructorArguments: [rsrPrevAddr, rsrAddr],
-    contract: 'contracts/UpgradeSpell.sol:UpgradeSpell',
+    address: forkSpellAddr,
+    constructorArguments: [oldRSRAddr, rsrAddr],
+    contract: 'contracts/ForkSpell.sol:ForkSpell',
   })
-  console.timeEnd('Verifying UpgradeSpell contract ...')
+  console.timeEnd('Verifying ForkSpell contract ...')
   /**************************************************************************/
 
   console.log('*********************************************************************')
   console.log(`Verifications completed successfully on network ${hre.network.name} (${chainId})\n`)
   console.log(`RSR:  ${rsrAddr}`)
-  console.log(`UpgradeSpell:  ${upgradeSpellAddr}`)
+  console.log(`ForkSpell:  ${forkSpellAddr}`)
   console.log('********************************************************************')
 }
 

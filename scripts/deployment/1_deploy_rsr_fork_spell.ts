@@ -1,17 +1,18 @@
 import fs from 'fs'
 import hre, { ethers } from 'hardhat'
+
 import { getChainId, isValidContract } from '../../common/blockchain-utils'
 import { networkConfig } from '../../common/configuration'
-import { IDeployments, fileExists, getDeploymentFilename } from './deployment_utils'
-import { RSR, UpgradeSpell } from '../../typechain'
+import { ForkSpell, RSR } from '../../typechain'
+import { fileExists, getDeploymentFilename, IDeployments } from './deployment_utils'
 
 let rsrToken: RSR
-let upgradeSpell: UpgradeSpell
+let forkSpell: ForkSpell
 
-const deploymentsData: IDeployments = { rsrPrev: '', rsr: '', upgradeSpell: '', siphonSpell: '' }
+const deploymentsData: IDeployments = { oldRSR: '', rsr: '', forkSpell: '', siphonSpell: '' }
 
 async function main() {
-  const [alice] = await hre.ethers.getSigners()
+  const [burner] = await hre.ethers.getSigners()
   const chainId = await getChainId(hre)
 
   // Check if chain is supported
@@ -28,15 +29,15 @@ async function main() {
   }
 
   console.log(`Starting deployment on network ${hre.network.name} (${chainId})`)
-  console.log(`Deployer Alice account: ${alice.address}\n`)
+  console.log(`Burner account: ${burner.address}\n`)
 
   /** ******************** Deploy RSR ****************************************/
-  // Get previous RSR Address
-  let previousRSRAddr: string
+  // Get old RSR Address
+  let oldRSRAddr: string
 
-  if (networkConfig[chainId].rsrPrev) {
-    previousRSRAddr = networkConfig[chainId].rsrPrev as string
-    const valid: boolean = await isValidContract(hre, previousRSRAddr)
+  if (networkConfig[chainId].oldRSR) {
+    oldRSRAddr = networkConfig[chainId].oldRSR as string
+    const valid: boolean = await isValidContract(hre, oldRSRAddr)
     if (!valid) {
       throw new Error(`Previous RSR contract not found in network ${hre.network.name}`)
     }
@@ -55,25 +56,29 @@ async function main() {
 
   // Deploy RSR
   const RSR = await ethers.getContractFactory('RSR')
-  rsrToken = <RSR>await RSR.connect(alice).deploy(previousRSRAddr)
+  rsrToken = <RSR>await RSR.connect(burner).deploy(oldRSRAddr)
   await rsrToken.deployed()
 
   console.log('RSR deployed to:', rsrToken.address)
 
-  deploymentsData.rsrPrev = previousRSRAddr
+  // Set value in file
+  deploymentsData.oldRSR = oldRSRAddr
   deploymentsData.rsr = rsrToken.address
 
   // Transfer Ownership
-  await rsrToken.connect(alice).transferOwnership(companySafeAddr)
+  await rsrToken.connect(burner).changePauser(companySafeAddr)
+  await rsrToken.connect(burner).transferOwnership(companySafeAddr)
+  
+  /** ******************** Deploy Fork Spell ****************************************/
+  const ForkSpellFactory = await ethers.getContractFactory('ForkSpell')
+  forkSpell = <ForkSpell>await ForkSpellFactory.deploy(oldRSRAddr, rsrToken.address)
+  await forkSpell.deployed()
 
-  /** ******************** Deploy Upgrade Spell ****************************************/
-  const UpgradeSpellFactory = await ethers.getContractFactory('UpgradeSpell')
-  upgradeSpell = <UpgradeSpell>await UpgradeSpellFactory.deploy(previousRSRAddr, rsrToken.address)
-  await upgradeSpell.deployed()
+  console.log('Fork Spell deployed to:', forkSpell.address)
 
-  console.log('Upgrade Spell deployed to:', upgradeSpell.address)
+  // Set value in file
+  deploymentsData.forkSpell = forkSpell.address
 
-  deploymentsData.upgradeSpell = upgradeSpell.address
   /**************************************************************************/
   // Write temporary deployments file
   fs.writeFileSync(tmpDeploymentFile, JSON.stringify(deploymentsData, null, 2))
@@ -84,7 +89,7 @@ async function main() {
   console.log(`Deployments completed successfully on network ${hre.network.name} (${chainId})\n`)
   console.log(`RSR:  ${rsrToken.address}`)
   console.log(`   -> Ownership set to:  ${companySafeAddr}`)
-  console.log(`UpgradeSpell:  ${upgradeSpell.address}`)
+  console.log(`ForkSpell:  ${forkSpell.address}`)
   console.log('********************************************************************')
 }
 
