@@ -10,6 +10,8 @@ import { RSR } from '../../typechain/RSR'
 import { SlowWallet } from '../../typechain/SlowWallet'
 import { UpgradeSpell } from '../../typechain/UpgradeSpell'
 import { impersonate } from './utils/accounts'
+import { UPGRADE_SIPHONS } from './../../scripts/deployment/siphon_config'
+import { SiphonSpell } from '../../typechain/SiphonSpell'
 
 // Relevant addresses (Mainnet)
 const RSR_PREVIOUS_ADDRESS = '0x8762db106b2c2a0bccb3a80d1ed41273552616e8'
@@ -18,61 +20,82 @@ const SLOW_WALLET = '0x4903DC97816f99410E8dfFF51149fA4C3CdaD1b8'
 const MULTISIG_WALLET = '0xb268c230720D16C69a61CBeE24731E3b2a3330A1'
 const HOLDER_ADDRESS = '0x72A53cDBBcc1b9efa39c834A540550e23463AAcB'
 
-describe('RSR contract - Mainnet Forking', function () {
-  let owner: SignerWithAddress
-  let addr1: SignerWithAddress
-  let companySafeAddress: SignerWithAddress
-  let pauser: JsonRpcSigner
-  let holder: JsonRpcSigner
+let owner: SignerWithAddress
+let addr1: SignerWithAddress
+let companySafeAddress: SignerWithAddress
+let pauser: JsonRpcSigner
+let holder: JsonRpcSigner
 
-  let prevRSR: ReserveRightsToken
-  let slowWallet: SlowWallet
-  let multisigWallet: MultiSigWalletWithDailyLimit
-  let rsrToken: RSR
-  let upgradeSpell: UpgradeSpell
+let prevRSR: ReserveRightsToken
+let slowWallet: SlowWallet
+let multisigWallet: MultiSigWalletWithDailyLimit
+let rsrToken: RSR
+let upgradeSpell: UpgradeSpell
+let siphonSpell: SiphonSpell
 
-  beforeEach(async function () {
-    ;[owner, addr1, companySafeAddress] = await ethers.getSigners()
+const deployContracts = async () => {
+  ;[owner, addr1, companySafeAddress] = await ethers.getSigners()
 
-    // Use Mainnet fork
-    await hre.network.provider.request({
-      method: 'hardhat_reset',
-      params: [
-        {
-          forking: {
-            jsonRpcUrl: process.env.MAINNET_RPC_URL,
-            blockNumber: 13810440,
-          },
+  // Use Mainnet fork
+  await hre.network.provider.request({
+    method: 'hardhat_reset',
+    params: [
+      {
+        forking: {
+          jsonRpcUrl: process.env.MAINNET_RPC_URL,
+          blockNumber: 13810440,
         },
-      ],
-    })
-
-    // Retrieve Deployed contracts
-    prevRSR = <ReserveRightsToken>(
-      await ethers.getContractAt('ReserveRightsToken', RSR_PREVIOUS_ADDRESS)
-    )
-    slowWallet = <SlowWallet>await ethers.getContractAt('SlowWallet', SLOW_WALLET)
-    multisigWallet = <MultiSigWalletWithDailyLimit>(
-      await ethers.getContractAt('MultiSigWalletWithDailyLimit', MULTISIG_WALLET)
-    )
-
-    // Impersonate accounts
-    pauser = await impersonate(RSR_PAUSER_ADDRESS)
-    holder = await impersonate(HOLDER_ADDRESS)
-
-    // Deploy new RSR
-    const RSR = await ethers.getContractFactory('RSR')
-    rsrToken = <RSR>await RSR.connect(owner).deploy(prevRSR.address)
-
-    // Deploy upgrade spell
-    const UpgradeSpellFactory = await ethers.getContractFactory('UpgradeSpell')
-    upgradeSpell = <UpgradeSpell>await UpgradeSpellFactory.deploy(prevRSR.address, rsrToken.address)
+      },
+    ],
   })
 
-  describe('Deployment', function () {
+  // Retrieve Deployed contracts
+  prevRSR = <ReserveRightsToken>(
+    await ethers.getContractAt('ReserveRightsToken', RSR_PREVIOUS_ADDRESS)
+  )
+  slowWallet = <SlowWallet>await ethers.getContractAt('SlowWallet', SLOW_WALLET)
+  multisigWallet = <MultiSigWalletWithDailyLimit>(
+    await ethers.getContractAt('MultiSigWalletWithDailyLimit', MULTISIG_WALLET)
+  )
+
+  // Impersonate accounts
+  pauser = await impersonate(RSR_PAUSER_ADDRESS)
+  holder = await impersonate(HOLDER_ADDRESS)
+
+  // Deploy new RSR
+  const RSR = await ethers.getContractFactory('RSR')
+  rsrToken = <RSR>await RSR.connect(owner).deploy(prevRSR.address)
+
+  // Deploy upgrade spell
+  const UpgradeSpellFactory = await ethers.getContractFactory('UpgradeSpell')
+  upgradeSpell = <UpgradeSpell>await UpgradeSpellFactory.deploy(prevRSR.address, rsrToken.address)
+}
+
+// @comment: contract deployment required before deploying siphons
+const deploySiphon = async (siphons = UPGRADE_SIPHONS) => {
+  const SiphonSpellfactory = await ethers.getContractFactory('SiphonSpell')
+  siphonSpell = <SiphonSpell>await SiphonSpellfactory.deploy(rsrToken.address, UPGRADE_SIPHONS)
+}
+
+describe.skip('RSR contract - Mainnet Forking', function () {
+  beforeEach(async () => {
+    await deployContracts()
+  })
+
+  describe('Before upgrade', async () => {
     it('Should start with the total supply of previous RSR', async function () {
       const totalSupplyPrev = await prevRSR.totalSupply()
       expect(await rsrToken.totalSupply()).to.equal(totalSupplyPrev)
+    })
+  })
+
+  describe('Upgrade period', async () => {
+
+  })
+
+  describe('After upgrade', () => {
+    beforeEach(async () => {
+      await deploySiphon()
     })
   })
 
