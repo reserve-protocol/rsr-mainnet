@@ -1,10 +1,9 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { expect } from 'chai'
 import { signERC2612Permit } from 'eth-permit'
-import { BigNumberish, ContractFactory } from 'ethers'
+import { ContractFactory } from 'ethers'
 import { ethers } from 'hardhat'
-
-import { bn, ONE, ZERO } from '../common/numbers'
+import { ONE, ZERO } from '../common/numbers'
 import { ERC20Mock, ForkSpell, ReserveRightsTokenMock, RSRMock, SiphonSpell } from '../typechain'
 import { Siphon, WEIGHT_ONE, ZERO_ADDRESS } from './common'
 
@@ -53,19 +52,17 @@ describe('RSR contract', () => {
     oldRSR.connect(owner).addPauser(forkSpell.address)
   })
 
-  describe('Deployment', () => {
-    it('should inherit the total supply for the old RSR', async () => {
-      const totalSupplyPrev = await oldRSR.totalSupply()
-      expect(await rsr.totalSupply()).to.equal(totalSupplyPrev)
-    })
-  })
-
-  describe('Prior to the fork (SETUP phase)', () => {
+  describe('Prior to the fork [SETUP] phase', () => {
     beforeEach(async () => {
       await setInitialBalances()
     })
 
-    it('dont allow siphon from the WORKING phase', async () => {
+    it('should inherit the total supply for the old RSR', async () => {
+      const totalSupplyPrev = await oldRSR.totalSupply()
+      expect(await rsr.totalSupply()).to.equal(totalSupplyPrev)
+    })
+
+    it('dont allow siphon from the [WORKING] phase', async () => {
       await oldRSR.connect(owner).pause()
       await rsr.connect(owner).moveToWorking()
       await expect(
@@ -73,7 +70,7 @@ describe('RSR contract', () => {
       ).to.be.revertedWith('only mage or owner')
     })
 
-    it('dont allow RSR move to WORKING phase if OldRSR is not paused', async () => {
+    it('dont allow RSR move to [WORKING] phase if OldRSR is not paused', async () => {
       await expect(rsr.connect(owner).moveToWorking()).to.be.revertedWith(
         'waiting for oldRSR to pause'
       )
@@ -91,7 +88,7 @@ describe('RSR contract', () => {
       ).to.be.revertedWith('only mage or owner')
     })
 
-    it('should not allow RSR transfers or approvals until oldRSR is paused', async () => {
+    it('should not allow RSR transfers or approvals during the [SETUP] phase', async () => {
       const permit = await signERC2612Permit(
         ethers.provider,
         rsr.address,
