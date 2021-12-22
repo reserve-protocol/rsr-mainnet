@@ -237,7 +237,7 @@ contract RSR is Pausable, Ownable, Enchantable, ERC20Permit {
         override
         whenNotPaused
         ensureBalCrossed(sender)
-        ensureAllowanceCrossed(sender, recipient)
+        ensureAllowanceCrossed(sender, _msgSender())
         returns (bool)
     {
         require(recipient != address(this), "no transfers to this token address");
@@ -260,7 +260,7 @@ contract RSR is Pausable, Ownable, Enchantable, ERC20Permit {
         bytes32 s
     ) public override whenNotPaused {
         super.permit(owner, spender, value, deadline, v, r, s);
-        allowanceCrossed[_msgSender()][spender] = true;
+        allowanceCrossed[owner][spender] = true;
     }
 
     function increaseAllowance(address spender, uint256 addedValue)

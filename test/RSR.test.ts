@@ -29,7 +29,13 @@ async function castSiphons(...siphons: Siphon[]) {
   const siphonSpell = <SiphonSpell>(
     await SiphonSpellFactory.connect(owner).deploy(rsr.address, siphons)
   )
-  await rsr.connect(owner).castSpell(siphonSpell.address)
+  await expect(rsr.connect(owner).castSpell(siphonSpell.address))
+    .to.emit(rsr, 'MageChanged')
+    .withArgs(ZERO_ADDRESS, siphonSpell.address)
+    .and.to.emit(rsr, 'MageChanged')
+    .withArgs(siphonSpell.address, ZERO_ADDRESS)
+    .and.to.emit(rsr, 'SpellCast')
+    .withArgs(siphonSpell.address)
 }
 
 describe('RSR contract', () => {
@@ -64,7 +70,12 @@ describe('RSR contract', () => {
 
     it('dont allow siphon from the [WORKING] phase', async () => {
       await oldRSR.connect(owner).pause()
-      await rsr.connect(owner).moveToWorking()
+      await expect(rsr.connect(owner).moveToWorking())
+        .to.emit(rsr, 'Unpaused')
+        .withArgs(owner.address)
+        .and.to.emit(rsr, 'OwnershipTransferred')
+        .withArgs(owner.address, ZERO_ADDRESS)
+
       await expect(
         rsr.connect(owner).siphon(ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, WEIGHT_ONE)
       ).to.be.revertedWith('only mage or owner')
@@ -142,7 +153,14 @@ describe('RSR contract', () => {
         },
       ])
 
-      await rsr.connect(owner).castSpell(siphonSpell.address)
+      await expect(rsr.connect(owner).castSpell(siphonSpell.address))
+        .to.emit(rsr, 'MageChanged')
+        .withArgs(ZERO_ADDRESS, siphonSpell.address)
+        .and.to.emit(rsr, 'MageChanged')
+        .withArgs(siphonSpell.address, ZERO_ADDRESS)
+        .and.to.emit(rsr, 'SpellCast')
+        .withArgs(siphonSpell.address)
+
       await expect(rsr.connect(owner).castSpell(siphonSpell.address)).to.be.revertedWith(
         'spell already cast'
       )
@@ -187,7 +205,12 @@ describe('RSR contract', () => {
     it('should revert when trying to unpause during the working phase', async () => {
       await expect(rsr.connect(owner).unpause()).to.be.revertedWith('only during working phase')
       await oldRSR.connect(owner).pause()
-      await rsr.connect(owner).moveToWorking()
+      await expect(rsr.connect(owner).moveToWorking())
+        .to.emit(rsr, 'Unpaused')
+        .withArgs(owner.address)
+        .and.to.emit(rsr, 'OwnershipTransferred')
+        .withArgs(owner.address, ZERO_ADDRESS)
+
       await expect(rsr.connect(owner).unpause()).to.be.revertedWith('Pausable: not paused')
     })
 
@@ -202,7 +225,19 @@ describe('RSR contract', () => {
     })
 
     it('does the fork', async () => {
-      await rsr.connect(owner).castSpell(forkSpell.address)
+      await expect(rsr.connect(owner).castSpell(forkSpell.address))
+        .to.emit(rsr, 'MageChanged')
+        .withArgs(ZERO_ADDRESS, forkSpell.address)
+        .and.to.emit(oldRSR, 'Paused')
+        .withArgs(forkSpell.address)
+        .and.to.emit(rsr, 'Unpaused')
+        .withArgs(forkSpell.address)
+        .and.to.emit(rsr, 'OwnershipTransferred')
+        .withArgs(owner.address, ZERO_ADDRESS)
+        .and.to.emit(rsr, 'MageChanged')
+        .withArgs(forkSpell.address, ZERO_ADDRESS)
+        .and.to.emit(rsr, 'SpellCast')
+        .withArgs(forkSpell.address)
     })
 
     it('reverts if not pauser of oldRSR', async () => {
@@ -216,7 +251,20 @@ describe('RSR contract', () => {
     })
 
     it('should only fork once', async () => {
-      await rsr.connect(owner).castSpell(forkSpell.address)
+      await expect(rsr.connect(owner).castSpell(forkSpell.address))
+        .to.emit(rsr, 'MageChanged')
+        .withArgs(ZERO_ADDRESS, forkSpell.address)
+        .and.to.emit(oldRSR, 'Paused')
+        .withArgs(forkSpell.address)
+        .and.to.emit(rsr, 'Unpaused')
+        .withArgs(forkSpell.address)
+        .and.to.emit(rsr, 'OwnershipTransferred')
+        .withArgs(owner.address, ZERO_ADDRESS)
+        .and.to.emit(rsr, 'MageChanged')
+        .withArgs(forkSpell.address, ZERO_ADDRESS)
+        .and.to.emit(rsr, 'SpellCast')
+        .withArgs(forkSpell.address)
+
       await expect(rsr.connect(owner).castSpell(forkSpell.address)).to.be.reverted
 
       const newForkSpell = <ForkSpell>await ForkSpellFactory.deploy(oldRSR.address, rsr.address)
@@ -227,7 +275,20 @@ describe('RSR contract', () => {
     it('should calculate balances correctly after siphon', async () => {
       await castSiphons({ from: addr1.address, to: addr2.address, weight: WEIGHT_ONE.div(2) })
       await castSiphons({ from: addr2.address, to: addr3.address, weight: WEIGHT_ONE })
-      await rsr.connect(owner).castSpell(forkSpell.address)
+      await expect(rsr.connect(owner).castSpell(forkSpell.address))
+        .to.emit(rsr, 'MageChanged')
+        .withArgs(ZERO_ADDRESS, forkSpell.address)
+        .and.to.emit(oldRSR, 'Paused')
+        .withArgs(forkSpell.address)
+        .and.to.emit(rsr, 'Unpaused')
+        .withArgs(forkSpell.address)
+        .and.to.emit(rsr, 'OwnershipTransferred')
+        .withArgs(owner.address, ZERO_ADDRESS)
+        .and.to.emit(rsr, 'MageChanged')
+        .withArgs(forkSpell.address, ZERO_ADDRESS)
+        .and.to.emit(rsr, 'SpellCast')
+        .withArgs(forkSpell.address)
+
       expect(await rsr.balanceOf(addr1.address)).to.eq(ONE)
       expect(await rsr.balanceOf(addr2.address)).to.eq(ONE)
       expect(await rsr.balanceOf(addr3.address)).to.eq(ONE.mul(3))
@@ -250,7 +311,13 @@ describe('RSR contract', () => {
     it('should return oldRSR balanceOf or the sum of old + new depending if the balance is crossed', async () => {
       expect(await rsr.balCrossed(addr1.address)).to.eq(false)
       expect(await rsr.balanceOf(addr1.address)).to.eq(await oldRSR.balanceOf(addr1.address))
-      await rsr.connect(addr1).transfer(addr2.address, ONE)
+
+      expect(await rsr.connect(addr1).transfer(addr2.address, ONE))
+        .to.emit(rsr, 'Transfer')
+        .withArgs(ZERO_ADDRESS, addr1.address, await oldRSR.balanceOf(addr1.address))
+        .and.to.emit(rsr, 'Transfer')
+        .withArgs(addr1.address, addr2.address, ONE)
+
       expect(await rsr.balCrossed(addr1.address)).to.eq(true)
       expect(await rsr.balanceOf(addr1.address)).to.eq(ONE)
       expect(await rsr.balanceOf(addr1.address)).to.not.eq(await oldRSR.balanceOf(addr1.address))
@@ -284,15 +351,11 @@ describe('RSR contract', () => {
         ONE.toString()
       )
 
-      await rsr.permit(
-        owner.address,
-        addr1.address,
-        ONE,
-        permit.deadline,
-        permit.v,
-        permit.r,
-        permit.s
+      await expect(
+        rsr.permit(owner.address, addr1.address, ONE, permit.deadline, permit.v, permit.r, permit.s)
       )
+        .to.emit(rsr, 'Approval')
+        .withArgs(owner.address, addr1.address, ONE)
 
       expect(await rsr.allowanceCrossed(owner.address, addr1.address)).to.equal(true)
       expect(await rsr.allowance(owner.address, addr1.address)).to.equal(ONE)
@@ -306,21 +369,49 @@ describe('RSR contract', () => {
         await rsr.allowance(owner.address, addr3.address)
       )
 
-      await rsr.connect(owner).increaseAllowance(addr3.address, ONE)
-      await rsr.connect(owner).decreaseAllowance(addr2.address, ONE)
-      await rsr.connect(owner).approve(addr1.address, ONE)
+      await expect(rsr.connect(owner).increaseAllowance(addr3.address, ONE))
+        .to.emit(rsr, 'Approval')
+        .withArgs(
+          owner.address,
+          addr3.address,
+          await oldRSR.allowance(owner.address, addr3.address)
+        )
+        .and.to.emit(rsr, 'Approval')
+        .withArgs(owner.address, addr3.address, ONE.mul(2))
+
+      await expect(rsr.connect(owner).decreaseAllowance(addr2.address, ONE))
+        .to.emit(rsr, 'Approval')
+        .withArgs(
+          owner.address,
+          addr2.address,
+          await oldRSR.allowance(owner.address, addr2.address)
+        )
+        .and.to.emit(rsr, 'Approval')
+        .withArgs(owner.address, addr2.address, ZERO)
+
+      await expect(rsr.connect(owner).approve(addr1.address, ONE))
+        .to.emit(rsr, 'Approval')
+        .withArgs(owner.address, addr1.address, ONE)
+
       expect(await rsr.allowanceCrossed(owner.address, addr3.address)).to.equal(true)
       expect(await rsr.allowanceCrossed(owner.address, addr2.address)).to.equal(true)
       expect(await rsr.allowanceCrossed(owner.address, addr1.address)).to.equal(true)
       expect(await rsr.allowance(owner.address, addr3.address)).to.equal(ONE.mul(2))
       expect(await rsr.allowance(owner.address, addr2.address)).to.equal(ZERO)
       expect(await oldRSR.allowance(owner.address, addr3.address)).to.equal(ONE)
+
       // Allowances are already crossed (coverage)
-      await rsr.connect(owner).increaseAllowance(addr3.address, ONE)
+      await expect(rsr.connect(owner).increaseAllowance(addr3.address, ONE))
+        .to.emit(rsr, 'Approval')
+        .withArgs(owner.address, addr3.address, ONE.mul(3))
     })
 
     it('should cross balance for sender account without changing the weights', async () => {
-      await rsr.connect(addr1).transfer(addr2.address, ZERO)
+      expect(await rsr.connect(addr1).transfer(addr2.address, ZERO))
+        .to.emit(rsr, 'Transfer')
+        .withArgs(ZERO_ADDRESS, addr1.address, await oldRSR.balanceOf(addr1.address))
+        .and.to.emit(rsr, 'Transfer')
+        .withArgs(addr1.address, addr2.address, ZERO)
 
       // Weights for addr1 should be unchanged
       // The balCrossed flag is turn to true
@@ -332,7 +423,9 @@ describe('RSR contract', () => {
       expect(await rsr.weights(addr2.address, addr2.address)).to.equal(0)
       expect(await rsr.hasWeights(addr2.address)).to.equal(false)
       // should transfer normally with no changes
-      await expect(rsr.connect(addr1).transfer(addr2.address, ONE)).to.be.not.reverted
+      await expect(rsr.connect(addr1).transfer(addr2.address, ONE))
+        .to.emit(rsr, 'Transfer')
+        .withArgs(addr1.address, addr2.address, ONE)
     })
 
     it('should cross balances and allowance when using "transferFrom"', async () => {
@@ -340,10 +433,23 @@ describe('RSR contract', () => {
       expect(await rsr.allowanceCrossed(owner.address, addr2.address)).to.equal(false)
       expect(await oldRSR.allowance(owner.address, addr2.address)).to.equal(ONE)
 
-      await rsr.connect(owner).approve(addr1.address, ONE)
-      await rsr.connect(addr1).transferFrom(owner.address, addr2.address, ONE.div(2))
+      await expect(rsr.connect(addr2).transferFrom(owner.address, addr1.address, ONE.div(2)))
+        .to.emit(rsr, 'Transfer')
+        .withArgs(ZERO_ADDRESS, owner.address, await oldRSR.balanceOf(owner.address))
+        .and.to.emit(rsr, 'Approval')
+        .withArgs(
+          owner.address,
+          addr2.address,
+          await oldRSR.allowance(owner.address, addr2.address)
+        )
+        .and.to.emit(rsr, 'Transfer')
+        .withArgs(owner.address, addr1.address, ONE.div(2))
+        .and.to.emit(rsr, 'Approval')
+        .withArgs(owner.address, addr2.address, ONE.div(2))
+
       expect(await rsr.balCrossed(owner.address)).to.equal(true)
       expect(await rsr.allowanceCrossed(owner.address, addr2.address)).to.equal(true)
+      expect(await rsr.allowanceCrossed(owner.address, addr1.address)).to.equal(false)
     })
 
     it('should not allow token transfer to this address', async () => {
@@ -353,7 +459,7 @@ describe('RSR contract', () => {
 
     describe('Pausing', () => {
       beforeEach(async () => {
-        await rsr.connect(owner).pause()
+        await expect(rsr.connect(owner).pause()).to.emit(rsr, 'Paused').withArgs(owner.address)
       })
 
       it('should revert transfer', async () => {
@@ -403,9 +509,11 @@ describe('RSR contract', () => {
       })
 
       it('should change pauser address and unpause', async () => {
-        await rsr.connect(owner).changePauser(addr1.address)
+        await expect(rsr.connect(owner).changePauser(addr1.address))
+          .to.emit(rsr, 'PauserChanged')
+          .withArgs(owner.address, addr1.address)
         expect(await rsr.pauser()).to.equal(addr1.address)
-        await rsr.connect(addr1).unpause()
+        await expect(rsr.connect(addr1).unpause()).to.emit(rsr, 'Unpaused').withArgs(addr1.address)
       })
     })
   })
@@ -423,20 +531,23 @@ describe('RSR contract', () => {
       expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(6))
       expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(6))
 
-      await rsr.connect(addr1).partiallyCross(addr2.address, 1)
-      expect(await rsr.oldBal(addr2.address)).to.not.equal(ONE.mul(6))
-      expect(await rsr.oldBal(addr2.address)).to.not.equal(ONE.mul(3))
-      expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(6))
-
-      await rsr.connect(addr1).partiallyCross(addr2.address, 1)
+      await expect(rsr.connect(addr1).partiallyCross(addr2.address, 2))
+        .to.emit(rsr, 'Transfer')
+        .withArgs(ZERO_ADDRESS, addr2.address, ONE.mul(1))
+        .to.emit(rsr, 'Transfer')
+        .withArgs(ZERO_ADDRESS, addr2.address, ONE.mul(2))
       expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(3))
       expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(6))
 
-      await rsr.connect(addr1).partiallyCross(addr2.address, 1e12)
+      await expect(rsr.connect(addr1).partiallyCross(addr2.address, 1e12)).to.not.emit
       expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(3))
       expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(6))
 
-      await rsr.connect(addr2).transfer(addr2.address, 0)
+      await expect(rsr.connect(addr2).transfer(addr2.address, 0))
+        .to.emit(rsr, 'Transfer')
+        .withArgs(addr2.address, addr2.address, 0)
+        .to.emit(rsr, 'Transfer')
+        .withArgs(ZERO_ADDRESS, addr2.address, ONE.mul(3))
       expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(3))
       expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(6))
     })
@@ -450,23 +561,34 @@ describe('RSR contract', () => {
       expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
       expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
 
-      await rsr.connect(addr2).partiallyCross(addr1.address, 1e12)
+      await expect(rsr.connect(addr2).partiallyCross(addr1.address, 1e12))
+        .to.emit(rsr, 'Transfer')
+        .withArgs(ZERO_ADDRESS, addr1.address, ONE)
       expect(await rsr.oldBal(addr1.address)).to.equal(0)
       expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(4))
       expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
       expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
 
-      await rsr.connect(addr1).partiallyCross(addr2.address, 1e12)
+      // TODO: Here we would like to assert two Transfers are emitted, but we can't due to waffle limitations
+      await expect(rsr.connect(addr1).partiallyCross(addr2.address, 1e12))
+      // .to.emit(rsr, 'Transfer')
+      // .withArgs(ZERO_ADDRESS, addr2.address, ONE)
+      // .to.emit(rsr, 'Transfer')
+      // .withArgs(ZERO_ADDRESS, addr2.address, ONE.mul(3))
       expect(await rsr.oldBal(addr1.address)).to.equal(0)
       expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
       expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
 
-      await rsr.connect(addr1).transfer(addr1.address, 0)
+      await expect(rsr.connect(addr1).transfer(addr1.address, 0))
+        .to.emit(rsr, 'Transfer')
+        .withArgs(addr1.address, addr1.address, 0)
       expect(await rsr.oldBal(addr1.address)).to.equal(0)
       expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
       expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
 
-      await rsr.connect(addr2).transfer(addr2.address, 0)
+      await expect(rsr.connect(addr2).transfer(addr2.address, 0))
+        .to.emit(rsr, 'Transfer')
+        .withArgs(addr2.address, addr2.address, 0)
       expect(await rsr.oldBal(addr1.address)).to.equal(0)
       expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
       expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
@@ -481,25 +603,31 @@ describe('RSR contract', () => {
       expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
       expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
 
-      await rsr.connect(addr1).transfer(addr1.address, 0)
+      await expect(rsr.connect(addr1).transfer(addr1.address, 0))
+        .to.emit(rsr, 'Transfer')
+        .withArgs(addr1.address, addr1.address, 0)
       expect(await rsr.oldBal(addr1.address)).to.equal(ONE)
       expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(4))
       expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
       expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
 
-      await rsr.connect(addr2).transfer(addr2.address, 0)
+      await expect(rsr.connect(addr2).transfer(addr2.address, 0))
+        .to.emit(rsr, 'Transfer')
+        .withArgs(addr2.address, addr2.address, 0)
+        .to.emit(rsr, 'Transfer')
+        .withArgs(ZERO_ADDRESS, addr2.address, ONE.mul(4))
       expect(await rsr.oldBal(addr1.address)).to.equal(ONE)
       expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(4))
       expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
       expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
 
-      await rsr.connect(addr2).partiallyCross(addr1.address, 1e12)
+      await expect(rsr.connect(addr2).partiallyCross(addr1.address, 1e12)).to.not.emit
       expect(await rsr.oldBal(addr1.address)).to.equal(ONE)
       expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(4))
       expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
       expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
 
-      await rsr.connect(addr1).partiallyCross(addr2.address, 1e12)
+      await expect(rsr.connect(addr1).partiallyCross(addr2.address, 1e12)).to.not.emit
       expect(await rsr.oldBal(addr1.address)).to.equal(ONE)
       expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(4))
       expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
@@ -515,25 +643,35 @@ describe('RSR contract', () => {
       expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
       expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
 
-      await rsr.connect(addr1).transfer(addr1.address, 0)
+      await expect(rsr.connect(addr1).transfer(addr1.address, 0))
+        .to.emit(rsr, 'Transfer')
+        .withArgs(addr1.address, addr1.address, 0)
+        .to.emit(rsr, 'Transfer')
+        .withArgs(ZERO_ADDRESS, addr1.address, ONE)
       expect(await rsr.oldBal(addr1.address)).to.equal(ONE)
       expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(4))
       expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
       expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
 
-      await rsr.connect(addr1).partiallyCross(addr1.address, 1e12)
+      await expect(rsr.connect(addr1).partiallyCross(addr1.address, 1e12)).to.not.emit
       expect(await rsr.oldBal(addr1.address)).to.equal(ONE)
       expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(4))
       expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
       expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
 
-      await rsr.connect(addr2).partiallyCross(addr2.address, 1e12)
+      await expect(rsr.connect(addr2).partiallyCross(addr2.address, 1e12))
+        .to.emit(rsr, 'Transfer')
+        .withArgs(ZERO_ADDRESS, addr2.address, ONE)
       expect(await rsr.oldBal(addr1.address)).to.equal(ONE)
       expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(3))
       expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
       expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
 
-      await rsr.connect(addr2).transfer(addr2.address, 0)
+      await expect(rsr.connect(addr2).transfer(addr2.address, 0))
+        .to.emit(rsr, 'Transfer')
+        .withArgs(ZERO_ADDRESS, addr2.address, ONE.mul(3))
+        .to.emit(rsr, 'Transfer')
+        .withArgs(addr2.address, addr2.address, 0)
       expect(await rsr.oldBal(addr1.address)).to.equal(ONE)
       expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(3))
       expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
@@ -549,24 +687,32 @@ describe('RSR contract', () => {
       expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
       expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
 
-      await rsr.connect(addr2).transfer(addr2.address, 0)
+      await expect(rsr.connect(addr2).transfer(addr2.address, 0))
+        .to.emit(rsr, 'Transfer')
+        .withArgs(addr2.address, addr2.address, 0)
+        .to.emit(rsr, 'Transfer')
+        .withArgs(ZERO_ADDRESS, addr2.address, ONE.mul(4))
       expect(await rsr.oldBal(addr1.address)).to.equal(ONE)
       expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(4))
       expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
       expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
 
-      await rsr.connect(addr1).partiallyCross(addr1.address, 1e12)
+      await expect(rsr.connect(addr2).partiallyCross(addr1.address, 1e12))
+        .to.emit(rsr, 'Transfer')
+        .withArgs(ZERO_ADDRESS, addr1.address, ONE)
       expect(await rsr.oldBal(addr1.address)).to.equal(0)
       expect(await rsr.oldBal(addr2.address)).to.equal(ONE.mul(4))
       expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
       expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
 
-      await rsr.connect(addr1).partiallyCross(addr2.address, 1e12)
+      await expect(rsr.connect(addr1).partiallyCross(addr2.address, 1e12)).to.not.emit
       expect(await rsr.oldBal(addr1.address)).to.equal(0)
       expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
       expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
 
-      await rsr.connect(addr1).transfer(addr1.address, 0)
+      await expect(rsr.connect(addr1).transfer(addr1.address, 0))
+        .to.emit(rsr, 'Transfer')
+        .withArgs(addr1.address, addr1.address, 0)
       expect(await rsr.oldBal(addr1.address)).to.equal(0)
       expect(await rsr.balanceOf(addr1.address)).to.equal(ONE)
       expect(await rsr.balanceOf(addr2.address)).to.equal(ONE.mul(4))
