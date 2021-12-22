@@ -30,6 +30,7 @@
     * RSR.oldRSR() is oldRSR
     * RSR.totalSupply() is 100,000,000,000
     * RSR.owner() is CompanySafe
+    * RSR.phase() is 0 (SETUP)
     * RSR.pauser() is CompanySafe
     * RSR.balanceOf(A) = oldRSR.balanceOf(A), for at least one address A with nonzero balances.
     * Confirm ForkSpell.rsr() is RSR address
@@ -84,8 +85,9 @@
 
 2. Check on Etherscan to ensure that:
     * RSR.paused() is false
-    * RSR.regent() is 0
+    * RSR.mage() is 0
     * RSR.owner() is 0
+    * RSR.phase() is 1 (WORKING)
     * RSR.pauser() is CompanySafe
     * oldRSR.paused() is true
     * The balance checks from Phase 3 all work, as long as the addresses have not been crossed since fork

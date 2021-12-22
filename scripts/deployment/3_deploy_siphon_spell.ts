@@ -2,59 +2,42 @@ import fs from 'fs'
 import hre, { ethers } from 'hardhat'
 import { getChainId, isValidContract } from '../../common/blockchain-utils'
 import { networkConfig } from '../../common/configuration'
-import { IDeployments, getDeploymentFile, getDeploymentFilename } from './deployment_utils'
+import { getDeploymentFile, getDeploymentFilename } from './deployment_utils'
 import { SiphonSpell } from '../../typechain'
 import { UPGRADE_SIPHONS } from './siphon_config'
 
-let siphonSpell: SiphonSpell
-
-let deploymentsData: IDeployments
-
 async function main() {
+  // ==== Read Configuration ====
   const [burner] = await hre.ethers.getSigners()
   const chainId = await getChainId(hre)
 
-  // Check if chain is supported
+  console.log(`Deploying SiphonSpell to network ${hre.network.name} (${chainId})
+    with burner account: ${burner.address}`)
+
   if (!networkConfig[chainId]) {
     throw new Error(`Missing network configuration for ${hre.network.name}`)
   }
 
-  console.log(`Starting deployment on network ${hre.network.name} (${chainId})`)
-  console.log(`Deployer account: ${burner.address}\n`)
+  const deploymentFilename = getDeploymentFilename(chainId)
+  const deployments = getDeploymentFile(deploymentFilename, chainId)
 
-  // Get RSR address and contract
-  const tmpDeploymentFile = getDeploymentFilename(chainId)
-  deploymentsData = getDeploymentFile(tmpDeploymentFile, chainId)
-
-  const rsrAddr: string = deploymentsData.rsr
-  if (rsrAddr) {
-    const valid: boolean = await isValidContract(hre, rsrAddr)
-    if (!valid) {
-      throw new Error(`RSR contract not found in network ${hre.network.name}`)
-    }
-  } else {
+  if (!deployments.rsr) {
     throw new Error(`Missing address for RSR in network ${hre.network.name}`)
+  } else if (!(await isValidContract(hre, deployments.rsr))) {
+    throw new Error(`RSR contract not found in network ${hre.network.name}`)
   }
 
-  /** ******************** Deploy Siphon Spell ****************************************/
-  const SiphonSpellfactory = await ethers.getContractFactory('SiphonSpell')
-  siphonSpell = <SiphonSpell>await SiphonSpellfactory.deploy(rsrAddr, UPGRADE_SIPHONS)
+  // ******************** Deploy Siphon Spell ****************************************/
+  const SiphonSpellFactory = await ethers.getContractFactory('SiphonSpell')
+  const siphonSpell = <SiphonSpell>await SiphonSpellFactory.deploy(deployments.rsr, UPGRADE_SIPHONS)
   await siphonSpell.deployed()
 
-  console.log('Siphon Spell deployed to:', siphonSpell.address)
-
-  // Set value for file
-  deploymentsData.siphonSpell = siphonSpell.address
-
-  /**************************************************************************/
-
   // Write temporary deployments file
-  fs.writeFileSync(tmpDeploymentFile, JSON.stringify(deploymentsData, null, 2))
+  deployments.siphonSpell = siphonSpell.address
+  fs.writeFileSync(deploymentFilename, JSON.stringify(deployments, null, 2))
 
-  console.log('*********************************************************************')
-  console.log(`Deployments completed successfully on network ${hre.network.name} (${chainId})\n`)
-  console.log(`SiphonSpell:  ${siphonSpell.address}`)
-  console.log('********************************************************************')
+  console.log(`Deployed to ${hre.network.name} (${chainId})
+    SiphonSpell:  ${siphonSpell.address}`)
 }
 
 main().catch((error) => {
