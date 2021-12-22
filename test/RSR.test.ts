@@ -6,6 +6,7 @@ import { ethers } from 'hardhat'
 
 import { bn, ONE, ZERO } from '../common/numbers'
 import { ERC20Mock, ForkSpell, ReserveRightsTokenMock, RSRMock, SiphonSpell } from '../typechain'
+import { Siphon, WEIGHT_ONE, ZERO_ADDRESS } from './common'
 
 let owner: SignerWithAddress
 let addr1: SignerWithAddress
@@ -16,8 +17,6 @@ let SiphonSpellFactory: ContractFactory
 let ForkSpellFactory: ContractFactory
 let forkSpell: ForkSpell
 let rsr: RSRMock
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
-const WEIGHT_ONE = bn('1e18')
 
 async function setInitialBalances() {
   await oldRSR.mint(owner.address, ONE)
@@ -25,12 +24,6 @@ async function setInitialBalances() {
   await oldRSR.mint(addr2.address, ONE.mul(3))
   await oldRSR.connect(owner).approve(addr3.address, ONE)
   await oldRSR.connect(owner).approve(addr2.address, ONE)
-}
-
-interface Siphon {
-  from: string
-  to: string
-  weight: BigNumberish
 }
 
 async function castSiphons(...siphons: Siphon[]) {
