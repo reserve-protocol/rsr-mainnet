@@ -33,6 +33,7 @@ let rsrToken: RSR
 let forkSpell: ForkSpell
 let siphonSpell: SiphonSpell
 
+// Deploy RSR related contracts
 const deployContracts = async () => {
   ;[owner, addr1, companySafeAddress] = await ethers.getSigners()
 
@@ -77,27 +78,29 @@ const deploySiphon = async (siphons = UPGRADE_SIPHONS) => {
   siphonSpell = <SiphonSpell>await SiphonSpellfactory.deploy(rsrToken.address, UPGRADE_SIPHONS)
 }
 
-describe.skip('RSR contract - Mainnet Forking', function () {
+describe('RSR contract - Mainnet Forking', function () {
   beforeEach(async () => {
     await deployContracts()
   })
 
-  describe('Before fork', async () => {
+  describe('Prior to the fork (SETUP phase)', async () => {
     it('Should start with the total supply of previous RSR', async function () {
       const totalSupplyPrev = await oldRSR.totalSupply()
       expect(await rsrToken.totalSupply()).to.equal(totalSupplyPrev)
     })
   })
 
-  describe('Upgrade period', async () => {})
+  describe('The upgrade', async () => {
 
-  describe('After fork', () => {
+  })
+
+  describe('After the upgrade (WORKING phase)', () => {
     beforeEach(async () => {
       await deploySiphon()
     })
   })
 
-  describe('Balances and Transfers - Before Pausing Previous RSR', function () {
+  describe.skip('Balances and Transfers - Before Pausing Previous RSR', function () {
     it('Should return balances from previous RSR if not crossed', async function () {
       // Compare balances between contracts
       expect(await rsrToken.balanceOf(HOLDER_ADDRESS)).to.equal(
@@ -133,7 +136,7 @@ describe.skip('RSR contract - Mainnet Forking', function () {
     })
   })
 
-  describe('Balances and Transfers - After Pausing Previous RSR', function () {
+  describe.skip('Balances and Transfers - After Pausing Previous RSR', function () {
     beforeEach(async function () {
       // Impersonate Accounts
       pauser = await impersonate(RSR_PAUSER_ADDRESS)
