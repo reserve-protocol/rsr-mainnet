@@ -10,7 +10,12 @@ import "./Enchantable.sol";
 
 /**
  * @title RSR
- * @dev An ERC20 insurance token for the Reserve Protocol ecosystem.
+
+ * An ERC20 insurance token for the Reserve Protocol ecosystem, using the copy-on-write
+ * pattern to enable a ugprade from the old RSR token.
+
+ * This token allows the configuration of a rich system of "siphons" to administer the
+ * copy pattern of some holder addresses, before the token goes into its WORKING phase.
  */
 contract RSR is Pausable, Ownable, Enchantable, ERC20Permit {
     using EnumerableSet for EnumerableSet.AddressSet;
