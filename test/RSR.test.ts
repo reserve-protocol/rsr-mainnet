@@ -351,9 +351,9 @@ describe('RSR contract', () => {
       await expect(rsr.connect(owner).transfer(rsr.address, ONE)).to.be.reverted
     })
 
-    describe('Pausing', () => {
+    describe.only('Pausing', () => {
       beforeEach(async () => {
-        await rsr.connect(owner).pause()
+        await expect(rsr.connect(owner).pause()).to.emit(rsr, 'Paused').withArgs(owner.address)
       })
 
       it('should revert transfer', async () => {
@@ -403,9 +403,11 @@ describe('RSR contract', () => {
       })
 
       it('should change pauser address and unpause', async () => {
-        await rsr.connect(owner).changePauser(addr1.address)
+        await expect(rsr.connect(owner).changePauser(addr1.address))
+          .to.emit(rsr, 'PauserChanged')
+          .withArgs(owner.address, addr1.address)
         expect(await rsr.pauser()).to.equal(addr1.address)
-        await rsr.connect(addr1).unpause()
+        await expect(rsr.connect(addr1).unpause()).to.emit(rsr, 'Unpaused').withArgs(addr1.address)
       })
     })
   })
