@@ -351,7 +351,7 @@ describe('RSR contract', () => {
       await expect(rsr.connect(owner).transfer(rsr.address, ONE)).to.be.reverted
     })
 
-    describe.only('Pausing', () => {
+    describe('Pausing', () => {
       beforeEach(async () => {
         await expect(rsr.connect(owner).pause()).to.emit(rsr, 'Paused').withArgs(owner.address)
       })
