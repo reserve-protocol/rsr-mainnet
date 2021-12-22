@@ -1,7 +1,6 @@
 import { JsonRpcSigner } from '@ethersproject/providers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { expect } from 'chai'
-import { BigNumber } from 'ethers'
 import hre, { ethers } from 'hardhat'
 
 import { ForkSpell } from '../../typechain/ForkSpell'
@@ -12,8 +11,8 @@ import { SiphonSpell } from '../../typechain/SiphonSpell'
 import { SlowWallet } from '../../typechain/SlowWallet'
 import { UPGRADE_SIPHONS } from './../../scripts/deployment/siphon_config'
 import { impersonate } from './utils/accounts'
-import { bn, ONE, ZERO } from '../../common/numbers'
-import { Siphon, WEIGHT_ONE, ZERO_ADDRESS } from '../common'
+import { ONE, ZERO } from '../../common/numbers'
+import { WEIGHT_ONE, ZERO_ADDRESS } from '../common'
 
 // Relevant addresses (Mainnet)
 const RSR_PREVIOUS_ADDRESS = '0x8762db106b2c2a0bccb3a80d1ed41273552616e8'
@@ -32,19 +31,21 @@ let pauser: JsonRpcSigner
 let holder: JsonRpcSigner
 
 let oldRSR: ReserveRightsToken
+// eslint-disable-next-line no-unused-vars
 let slowWallet: SlowWallet
+// eslint-disable-next-line no-unused-vars
 let multisigWallet: MultiSigWalletWithDailyLimit
 let rsr: RSR
 let forkSpell: ForkSpell
 let siphonSpell: SiphonSpell
 
-enum Phase {
-  SETUP,
-  WORKING,
+const Phase = {
+  SETUP: 0,
+  WORKING: 1,
 }
 
-// Deploy RSR-related contracts -- Phase 1 of deployment plan
-const deployContracts = async () => {
+// Setup test environment
+const setup = async () => {
   ;[addr1, burner0, burner1, burner2, companySafe] = await ethers.getSigners()
 
   // Use Mainnet fork
@@ -72,33 +73,59 @@ const deployContracts = async () => {
   // Impersonate accounts
   pauser = await impersonate(RSR_PAUSER_ADDRESS)
   holder = await impersonate(HOLDER_ADDRESS)
-
-  // Deploy new RSR
-  const RSR = await ethers.getContractFactory('RSR')
-  rsr = <RSR>await RSR.connect(burner0).deploy(oldRSR.address)
-  await rsr.connect(burner0).changePauser(companySafe.address)
-  await rsr.connect(burner0).transferOwnership(companySafe.address)
-
-  // Deploy fork spell
-  const ForkSpellFactory = await ethers.getContractFactory('ForkSpell')
-  forkSpell = <ForkSpell>await ForkSpellFactory.deploy(oldRSR.address, rsr.address)
 }
 
-// @comment: contract deployment required before deploying siphons -- Phase 3 of deployment plan
+// Deploy new RSR contract
+const deployRSR = async () => {
+  const RSR = await ethers.getContractFactory('RSR')
+  rsr = <RSR>await RSR.connect(burner0).deploy(oldRSR.address)
+
+  await rsr.connect(burner0).changePauser(companySafe.address)
+  await rsr.connect(burner0).transferOwnership(companySafe.address)
+}
+
+// Deploy fork spell for RSR
+const deployForkSpell = async () => {
+  const ForkSpellFactory = await ethers.getContractFactory('ForkSpell')
+  forkSpell = <ForkSpell>await ForkSpellFactory.connect(burner1).deploy(oldRSR.address, rsr.address)
+}
+
+// Deploy siphon contract
 const deploySiphon = async (siphons = UPGRADE_SIPHONS) => {
   const SiphonSpellfactory = await ethers.getContractFactory('SiphonSpell')
-  siphonSpell = <SiphonSpell>await SiphonSpellfactory.deploy(rsr.address, UPGRADE_SIPHONS)
+  siphonSpell = <SiphonSpell>(
+    await SiphonSpellfactory.connect(burner2).deploy(rsr.address, UPGRADE_SIPHONS)
+  )
 }
 
 describe('RSR contract - Mainnet Forking', function () {
   before(async () => {
-    await deployContracts()
+    await setup()
   })
 
+  // *************** Phase 1 *******************
   describe('Prior to pausing OldRSR (Deployment Phase 1)', async () => {
-    it('Should start with the total supply of previous RSR', async function () {
+    before(async () => {
+      await deployRSR()
+    })
+
+    it('should start with the total supply of OldRSR', async function () {
       const totalSupplyPrev = await oldRSR.totalSupply()
-      expect(await rsr.totalSupply()).to.equal(totalSupplyPrev)
+      expect(await rsr.totalSupply()).to.eq(totalSupplyPrev)
+    })
+
+    it('should start paused and in the [SETUP] phase', async () => {
+      expect(await rsr.paused()).to.eq(true)
+      expect(await rsr.phase()).to.eq(Phase.SETUP)
+    })
+
+    it('RSR owner and pauser should be the companySafe address', async () => {
+      expect(await rsr.owner()).to.eq(companySafe.address)
+      expect(await rsr.pauser()).to.eq(companySafe.address)
+    })
+
+    it('RSR and OldRSR balanceOf should be equal', async () => {
+      expect(await rsr.balanceOf(holder._address)).to.eq(await oldRSR.balanceOf(holder._address))
     })
 
     it('dont allow RSR move to WORKING phase if OldRSR is not paused', async () => {
@@ -118,107 +145,67 @@ describe('RSR contract - Mainnet Forking', function () {
       await expect(rsr.connect(companySafe).approve(addr1.address, ONE)).to.be.reverted
     })
 
-    describe('Then pausing oldRSR (Deployment Phase 2)', () => {
+    // *************** Phase 2 *******************
+    describe('Then pausing OldRSR (Deployment Phase 2)', () => {
       before(async () => {
+        await deployForkSpell()
         await oldRSR.connect(pauser).addPauser(forkSpell.address)
       })
 
+      it('the deployed fork spell should point to the expected RSR address', async () => {
+        expect(await forkSpell.rsrAddr()).to.eq(rsr.address)
+      })
+
+      it('the fork spell should be a Pauser of OldRSR', async () => {
+        expect(await oldRSR.isPauser(forkSpell.address))
+      })
+
+      it('OldRSR should not be paused', async () => {
+        expect(await oldRSR.paused()).to.eq(false)
+      })
+
+      // *************** Phase 3 *******************
       describe('Then deploying and casting the SiphonSpell (Deployment Phase 3)', async () => {
         before(async () => {
           // deploy + cast siphonspell
-          deploySiphon()
+          await deploySiphon()
           await rsr.connect(companySafe).castSpell(siphonSpell.address)
         })
 
-        it('rsr weights should be configured', async () => {
+        it.skip('rsr weights should be configured', async () => {
           // check weights as in deployment plan
         })
 
+        // *************** Phase 4 *******************
         describe('Then moving to the WORKING phase (The Fork, Deployment Phase 4)', async () => {
           before(async () => {
-            // cast forkspell
             await rsr.connect(companySafe).castSpell(forkSpell.address)
           })
-          it('rsr should be in WORKING', async () => {
+          it('OldRSR should be paused', async () => {
+            expect(await oldRSR.paused()).to.eq(true)
+          })
+          it('rsr should be in [WORKING] phase', async () => {
             expect(await rsr.phase()).to.eq(Phase.WORKING)
           })
-          it('rsr.owner should be zero', async () => {
+          it('rsr.owner and rsr.mage should be zero', async () => {
             expect(await rsr.owner()).to.eq(ZERO_ADDRESS)
+            expect(await rsr.mage()).to.eq(ZERO_ADDRESS)
           })
-          it('rsr.pauser should be CompanySafe', async () => {})
-          it('dont allow siphon from the WORKING phase', async () => {
+          it('rsr.pauser should be CompanySafe', async () => {
+            expect(await rsr.pauser()).to.eq(companySafe.address)
+          })
+          it('dont allow siphon from the [WORKING] phase', async () => {
             await expect(
               rsr.connect(companySafe).siphon(ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, WEIGHT_ONE)
             ).to.be.revertedWith('owner')
+          })
+          it('balances should be crossed when doing a transfer', async () => {
+            expect(await rsr.balCrossed(holder._address)).to.eq(false)
+            await rsr.connect(holder).transfer(holder._address, ZERO)
+            expect(await rsr.balCrossed(holder._address)).to.eq(true)
           })
         })
       })
     })
   })
 })
-
-// TODO: move the content of these balance tests into the above between-phase tests
-//
-// describe.skip('Balances and Transfers - Before Pausing Previous RSR', function () {
-//   it('Should return balances from previous RSR if not crossed', async function () {
-//     // Compare balances between contracts
-//     expect(await rsr.balanceOf(HOLDER_ADDRESS)).to.equal(await oldRSR.balanceOf(HOLDER_ADDRESS))
-//     expect(await rsr.balanceOf(addr1.address)).to.equal(await oldRSR.balanceOf(addr1.address))
-
-//     // Ensure no tokens were crossed
-//     expect(await rsr.balCrossed(HOLDER_ADDRESS)).to.equal(false)
-//     expect(await rsr.balCrossed(addr1.address)).to.equal(false)
-//   })
-
-//   it('Should not allow to transfer tokens between accounts', async function () {
-//     // Transfer 50 tokens from holder to addr1
-//     const amount = BigNumber.from(50000)
-//     const holderBalancePrev = await rsr.balanceOf(HOLDER_ADDRESS)
-//     const addr1BalancePrev = await rsr.balanceOf(addr1.address)
-
-//     // Attempt to  transfer
-//     await expect(rsr.connect(holder).transfer(addr1.address, amount)).to.be.revertedWith(
-//       'Pausable: paused'
-//     )
-
-//     // Balances remain unchanged
-//     expect(await rsr.balanceOf(addr1.address)).to.equal(addr1BalancePrev)
-//     expect(await rsr.balanceOf(HOLDER_ADDRESS)).to.equal(holderBalancePrev)
-
-//     // Check companySafe has not crossed
-//     expect(await rsr.balCrossed(HOLDER_ADDRESS)).to.equal(false)
-//     expect(await rsr.balCrossed(addr1.address)).to.equal(false)
-//   })
-// })
-
-// describe.skip('Balances and Transfers - After Pausing Previous RSR', function () {
-//   beforeEach(async function () {
-//     // Impersonate Accounts
-//     pauser = await impersonate(RSR_PAUSER_ADDRESS)
-//     holder = await impersonate(HOLDER_ADDRESS)
-
-//     // Pause previous contract
-//     await oldRSR.connect(pauser).pause()
-
-//     // Renounce ownership of new RSR
-//     await rsr.connect(companySafe).renounceOwnership()
-//     await rsr.connect(companySafe).unpause()
-//   })
-
-//   it('Should transfer tokens between accounts and cross sender', async function () {
-//     // Transfer 50 tokens from holder to addr1
-//     const amount = BigNumber.from(50000)
-//     const holderBalancePrev = await rsr.balanceOf(HOLDER_ADDRESS)
-//     const addr1BalancePrev = await rsr.balanceOf(addr1.address)
-
-//     // Perform transfer
-//     await rsr.connect(holder).transfer(addr1.address, amount)
-
-//     expect(await rsr.balanceOf(addr1.address)).to.equal(addr1BalancePrev.add(amount))
-//     expect(await rsr.balanceOf(HOLDER_ADDRESS)).to.equal(holderBalancePrev.sub(amount))
-
-//     // Check that balances have crossed
-//     expect(await rsr.balCrossed(HOLDER_ADDRESS)).to.equal(true)
-//     expect(await rsr.balCrossed(addr1.address)).to.equal(false)
-//   })
-// })
