@@ -59,10 +59,6 @@ describe('RSR contract', () => {
   })
 
   describe('Prior to the fork [SETUP] phase', () => {
-    beforeEach(async () => {
-      await setInitialBalances()
-    })
-
     it('should inherit the total supply for the old RSR', async () => {
       const totalSupplyPrev = await oldRSR.totalSupply()
       expect(await rsr.totalSupply()).to.equal(totalSupplyPrev)
