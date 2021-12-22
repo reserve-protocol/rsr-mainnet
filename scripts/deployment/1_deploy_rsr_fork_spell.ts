@@ -9,88 +9,68 @@ import { fileExists, getDeploymentFilename, IDeployments } from './deployment_ut
 let rsrToken: RSR
 let forkSpell: ForkSpell
 
-const deploymentsData: IDeployments = { oldRSR: '', rsr: '', forkSpell: '', siphonSpell: '' }
-
 async function main() {
+  // ==== Read Configuration ====
   const [burner] = await hre.ethers.getSigners()
   const chainId = await getChainId(hre)
 
-  // Check if chain is supported
+  console.log(` Deploying RSR and ForkSpell to network ${hre.network.name} (${chainId})
+    with burner account: ${burner.address}`)
+
   if (!networkConfig[chainId]) {
     throw new Error(`Missing network configuration for ${hre.network.name}`)
   }
 
   // Check if deployment file already exists for this chainId
-  const tmpDeploymentFile = getDeploymentFilename(chainId)
-  if (fileExists(tmpDeploymentFile)) {
-    throw new Error(
-      `File already exists for network ${hre.network.name} (${chainId}). Please delete this file and run again if required.`
-    )
+  const deploymentFilename = getDeploymentFilename(chainId)
+  if (fileExists(deploymentFilename)) {
+    throw new Error(`${deploymentFilename} exists; I won't overwrite it.`)
   }
 
-  console.log(`Starting deployment on network ${hre.network.name} (${chainId})`)
-  console.log(`Burner account: ${burner.address}\n`)
-
-  /** ******************** Deploy RSR ****************************************/
-  // Get old RSR Address
-  let oldRSRAddr: string
-
-  if (networkConfig[chainId].oldRSR) {
-    oldRSRAddr = networkConfig[chainId].oldRSR as string
-    const valid: boolean = await isValidContract(hre, oldRSRAddr)
-    if (!valid) {
-      throw new Error(`Previous RSR contract not found in network ${hre.network.name}`)
-    }
-  } else {
+  // Get oldRSR Address
+  const oldRSRAddr = networkConfig[chainId].oldRSR
+  if (!oldRSRAddr) {
     throw new Error(`Missing address for previous RSR in network ${hre.network.name}`)
+  } else if (!(await isValidContract(hre, oldRSRAddr))) {
+    throw new Error(`Previous RSR contract not found in network ${hre.network.name}`)
   }
 
-  // Check CompanySafe address is defined
-  let companySafeAddr: string
-
-  if (networkConfig[chainId].companySafe) {
-    companySafeAddr = networkConfig[chainId].companySafe as string
-  } else {
+  // Get CompanySafe address
+  const companySafeAddr = networkConfig[chainId].companySafe
+  if (!companySafeAddr) {
     throw new Error(`Missing address for CompanySafe in network ${hre.network.name}`)
   }
 
-  // Deploy RSR
+  // ******************** Deploy RSR ****************************************/
+
   const RSR = await ethers.getContractFactory('RSR')
   rsrToken = <RSR>await RSR.connect(burner).deploy(oldRSRAddr)
   await rsrToken.deployed()
 
-  console.log('RSR deployed to:', rsrToken.address)
-
-  // Set value in file
-  deploymentsData.oldRSR = oldRSRAddr
-  deploymentsData.rsr = rsrToken.address
-
-  // Transfer Ownership
+  // ********************* Transfer Auth **** **************************************/
   await rsrToken.connect(burner).changePauser(companySafeAddr)
   await rsrToken.connect(burner).transferOwnership(companySafeAddr)
-  
-  /** ******************** Deploy Fork Spell ****************************************/
+
+  // ******************** Deploy Fork Spell ****************************************/
   const ForkSpellFactory = await ethers.getContractFactory('ForkSpell')
   forkSpell = <ForkSpell>await ForkSpellFactory.deploy(oldRSRAddr, rsrToken.address)
   await forkSpell.deployed()
 
-  console.log('Fork Spell deployed to:', forkSpell.address)
+  // ********************* Output Further Configuration******************************
+  const deployments: IDeployments = {
+    oldRSR: oldRSRAddr,
+    rsr: rsrToken.address,
+    forkSpell: forkSpell.address,
+    siphonSpell: '',
+  }
+  fs.writeFileSync(deploymentFilename, JSON.stringify(deployments, null, 2))
 
-  // Set value in file
-  deploymentsData.forkSpell = forkSpell.address
+  console.log(`Deployed to ${hre.network.name} (${chainId}):
+    RSR:       ${rsrToken.address}
+    RSR.owner: ${companySafeAddr}
+    ForkSpell: ${forkSpell.address}
 
-  /**************************************************************************/
-  // Write temporary deployments file
-  fs.writeFileSync(tmpDeploymentFile, JSON.stringify(deploymentsData, null, 2))
-
-  /**************************************************************************/
-
-  console.log('*********************************************************************')
-  console.log(`Deployments completed successfully on network ${hre.network.name} (${chainId})\n`)
-  console.log(`RSR:  ${rsrToken.address}`)
-  console.log(`   -> Ownership set to:  ${companySafeAddr}`)
-  console.log(`ForkSpell:  ${forkSpell.address}`)
-  console.log('********************************************************************')
+    Deployment file: ${deploymentFilename}`)
 }
 
 main().catch((error) => {

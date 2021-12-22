@@ -14,22 +14,21 @@ export const getDeploymentFilename = (chainId: number): string => {
 }
 
 export const fileExists = (file: string): boolean => {
-  let flag = true
   try {
     fs.accessSync(file, fs.constants.F_OK)
+    return true
   } catch (e) {
-    flag = false
+    return false
   }
-
-  return flag
 }
 
 export const getDeploymentFile = (path: string, chainId: string): IDeployments => {
+  if (!fileExists(path)) {
+    throw new Error(`Deployment file ${path} does not exist. Maybe contracts weren't deployed?`)
+  }
   try {
     return JSON.parse(fs.readFileSync(path, 'utf8'))
   } catch (e) {
-    throw new Error(
-      `Deployment File does not exist for chain "${chainId}". Please make sure contracts are deployed and this file is properly generated.`
-    )
+    throw new Error(`Failed to read ${path}. Maybe the file is badly generated?`)
   }
 }
