@@ -1,9 +1,11 @@
 # Mainnet RSR
 This repo contains the code for a mainnet Reserve Rights token (RSR) that upgrades from a previously deployed version of RSR, found [here](https://github.com/reserve-protocol/rsr).
 
-TODO: ...more
+## Context
 
-## TODO: Context
+- Why a new contract?
+- How does it work?
+
 
 ## Crossing
 
@@ -60,7 +62,7 @@ The previously deployed version of RSR is referred to in this repo as `OldRSR`. 
 
 There are 3 roles in the new RSR:
 - Pauser: Can pause and unpause the ERC20 + ERC2612 functions. Intended to eventually be set to the zero address but kept longer than `owner`
-- Regent: Intra-tx role assigned temporarily in order to cast one-use spells. Never the sender of a tx. 
+- Mage: Intra-tx role assigned temporarily in order to cast one-use spells. Never the sender of a tx. 
 - Owner: Greatest access role. Intended to be set to the zero address at the time of the fork. 
 
 ## Spells
@@ -73,5 +75,5 @@ We have two spells, currently:
 
 ## Nuance: Total Supply
 
-The total supply of new RSR is fixed at 100 billion. However, due to rounding during crossings, it is possible for the sum of all balances on new RSR to be less than this amount. The delta is on the order of quanta RSR, and may even end up being 0 if there are no complicated siphons. 
+The total supply of new RSR is fixed at 100 billion. However, due to rounding during crossings, it is possible for the sum of all balances on new RSR to be less than this amount. The delta is on the order of a handful of quanta of RSR, and may even be 0 if there are no complicated siphons.
 
