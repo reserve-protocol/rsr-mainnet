@@ -95,7 +95,7 @@ describe('RSR contract - Mainnet Forking', function () {
     await deployContracts()
   })
 
-  describe('Prior to pausing OldRSR', async () => {
+  describe('Prior to the fork (SETUP PHASE)', async () => {
     it('Should start with the total supply of previous RSR', async function () {
       const totalSupplyPrev = await oldRSR.totalSupply()
       expect(await rsr.totalSupply()).to.equal(totalSupplyPrev)
@@ -115,35 +115,24 @@ describe('RSR contract - Mainnet Forking', function () {
 
     it('should not allow RSR transfers or approvals during [SETUP] phase', async () => {
       await expect(rsr.connect(companySafe).transfer(addr1.address, ONE)).to.be.reverted
-      // await expect(rsr.connect(companySafe).approve(addr1.address, ONE)).to.be.reverted
-      // await expect(rsr.connect(companySafe).transferFrom(companySafe.address, addr1.address, ONE)).to.be
-      //   .reverted
+      await expect(rsr.connect(companySafe).approve(addr1.address, ONE)).to.be.reverted
     })
 
-    describe('Then pausing oldRSR', () => {
+    describe('Then the fork (WORKING PHASE)', () => {
       before(async () => {
-        await oldRSR.connect(pauser).pause()
+        await oldRSR.connect(pauser).addPauser(forkSpell.address)
+        await rsr.connect(companySafe).castSpell(forkSpell.address)
       })
-
-      it('oldRSR should be paused', async () => {
-        expect(await oldRSR.paused()).to.eq(true)
+      it('rsr should be in WORKING', async () => {
+        expect(await rsr.phase()).to.eq(Phase.WORKING)
       })
-
-      describe('Then moving to the WORKING phase', async () => {
-        before(async () => {
-          await rsr.connect(companySafe).moveToWorking()
-        })
-        it('rsr should be in WORKING', async () => {
-          expect(await rsr.phase()).to.eq(Phase.WORKING)
-        })
-        it('rsr.owner should be zero', async () => {
-          expect(await rsr.owner()).to.eq(ZERO_ADDRESS)
-        })
-        it('dont allow siphon from the WORKING phase', async () => {
-          await expect(
-            rsr.connect(companySafe).siphon(ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, WEIGHT_ONE)
-          ).to.be.revertedWith('owner')
-        })
+      it('rsr.owner should be zero', async () => {
+        expect(await rsr.owner()).to.eq(ZERO_ADDRESS)
+      })
+      it('dont allow siphon from the WORKING phase', async () => {
+        await expect(
+          rsr.connect(companySafe).siphon(ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, WEIGHT_ONE)
+        ).to.be.revertedWith('owner')
       })
     })
   })
