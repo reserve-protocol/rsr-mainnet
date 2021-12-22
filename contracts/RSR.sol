@@ -283,7 +283,13 @@ contract RSR is Pausable, Ownable, Enchantable, ERC20Permit {
         return fixedSupply;
     }
 
-    /// The balance is a combination of crossed OldRSR balance + newly received tokens
+    /// @return The RSR balance of account
+    /// @dev The balance we return from balanceOf is the sum of three sources of balances:
+    ///     - newly received tokens
+    ///     - already-crossed oldRSR balances
+    ///     - not-yet-crossed oldRSR balances
+    /// super.balanceOf(account) == (newly received tokens + already-crossed oldRSR balances)
+    /// if not balCrossed[account], then _oldBal(account) == not-yet-crossed oldRSR balances
     function balanceOf(address account) public view override returns (uint256) {
         if (balCrossed[account]) {
             return super.balanceOf(account);
