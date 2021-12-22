@@ -73,6 +73,12 @@ describe('RSR contract', () => {
       ).to.be.revertedWith('only mage or owner')
     })
 
+    it('dont allow RSR move to WORKING phase if OldRSR is not paused', async () => {
+      await expect(rsr.connect(owner).moveToWorking()).to.be.revertedWith(
+        'waiting for oldRSR to pause'
+      )
+    })
+
     it('dont allow siphon if from is the zero address', async () => {
       await expect(
         rsr.connect(owner).siphon(ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, WEIGHT_ONE)
@@ -229,6 +235,13 @@ describe('RSR contract', () => {
       expect(await rsr.balanceOf(addr2.address)).to.eq(ONE)
       expect(await rsr.balanceOf(addr3.address)).to.eq(ONE.mul(3))
     })
+
+    it('should not allow siphons to be done in the WORKING phase', async () => {
+      await rsr.connect(owner).changePhase(1)
+      await expect(
+        rsr.connect(owner).siphon(ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, WEIGHT_ONE)
+      ).to.be.revertedWith('only during setup phase')
+    })
   })
 
   describe('After The Upgrade (WORKING phase)', () => {
@@ -338,6 +351,7 @@ describe('RSR contract', () => {
 
     it('should not allow token transfer to this address', async () => {
       await expect(rsr.connect(owner).transfer(rsr.address, ONE)).to.be.reverted
+      await expect(rsr.connect(owner).transferFrom(owner.address, rsr.address, ONE)).to.be.reverted
     })
 
     describe('Pausing', () => {
