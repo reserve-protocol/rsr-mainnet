@@ -67,16 +67,17 @@ describe('RSR contract', () => {
     })
   })
 
-  describe('Prior to the fork', () => {
+  describe('Prior to the fork (SETUP phase)', () => {
     beforeEach(async () => {
       await setInitialBalances()
     })
 
-    it('dont allow siphon if oldRSR is paused', async () => {
+    it('dont allow siphon from the WORKING phase', async () => {
       await oldRSR.connect(owner).pause()
+      await rsr.connect(owner).moveToWorking()
       await expect(
         rsr.connect(owner).siphon(ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, WEIGHT_ONE)
-      ).to.be.revertedWith('OldRSR is already paused')
+      ).to.be.revertedWith('only mage or owner')
     })
 
     it('dont allow siphon if from is the zero address', async () => {
@@ -88,7 +89,7 @@ describe('RSR contract', () => {
     it('cannot change weight if the account is not the owner', async () => {
       await expect(
         rsr.connect(addr1).siphon(ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, WEIGHT_ONE)
-      ).to.be.revertedWith('only regent or owner')
+      ).to.be.revertedWith('only mage or owner')
     })
 
     it('should not allow RSR transfers or approvals until oldRSR is paused', async () => {
@@ -124,7 +125,7 @@ describe('RSR contract', () => {
 
     it('should cast siphon without change', async () => {
       await castSiphons({ from: addr1.address, to: addr1.address, weight: 0 })
-      expect(await rsr.regent()).to.equal(ZERO_ADDRESS)
+      expect(await rsr.mage()).to.equal(ZERO_ADDRESS)
       expect(await rsr.owner()).to.equal(owner.address)
     })
 
@@ -187,14 +188,15 @@ describe('RSR contract', () => {
       ).to.be.revertedWith('weight too big')
     })
 
-    it('should revert when trying to unpause if token is not paused or owner is not the zero address', async () => {
-      await expect(rsr.connect(owner).unpause()).to.be.revertedWith('waiting for oldRSR to pause')
+    it('should revert when trying to unpause during the working phase', async () => {
+      await expect(rsr.connect(owner).unpause()).to.be.revertedWith('only during working phase')
       await oldRSR.connect(owner).pause()
-      await expect(rsr.connect(owner).unpause()).to.be.revertedWith('owner must be set to zero')
+      await rsr.connect(owner).moveToWorking()
+      await expect(rsr.connect(owner).unpause()).to.be.revertedWith('Pausable: not paused')
     })
 
     it('should not allow pausing if the owner is not admin or pauser', async () => {
-      await expect(rsr.connect(addr1).pause()).to.be.revertedWith('only pauser, regent, or owner')
+      await expect(rsr.connect(addr1).pause()).to.be.revertedWith('only pauser, mage, or owner')
     })
   })
 
@@ -236,7 +238,7 @@ describe('RSR contract', () => {
     })
   })
 
-  describe('After The Upgrade (default settings)', () => {
+  describe('After The Upgrade (WORKING phase)', () => {
     beforeEach(async () => {
       await setInitialBalances()
       await rsr.connect(owner).castSpell(forkSpell.address)
@@ -254,7 +256,7 @@ describe('RSR contract', () => {
     it('cannot change weight after RSR Transition', async () => {
       await expect(
         rsr.connect(owner).siphon(ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, WEIGHT_ONE)
-      ).to.be.revertedWith('only regent or owner')
+      ).to.be.revertedWith('only mage or owner')
     })
 
     it('By default the accounts preserve their balances (dont change weight)', async () => {

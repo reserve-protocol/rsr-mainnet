@@ -12,7 +12,7 @@ import "./MageMixin.sol";
  * @title RSR
  * @dev An ERC20 insurance token for the Reserve Protocol ecosystem.
  */
-contract RSR is Pausable, Ownable, MageMixin, ERC20Permit {
+contract RSR is Pausable, Ownable, Enchantable, ERC20Permit {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     ERC20Pausable public immutable oldRSR;
@@ -25,7 +25,30 @@ contract RSR is Pausable, Ownable, MageMixin, ERC20Permit {
     /// Note that due to lost dust crossing, it's possible sum(_balances) < fixedSupply
     uint256 private immutable fixedSupply;
 
+    /** Operational Lifecycle
+    The contract is initially deployed into SETUP. During the SETUP phase:
+    - admins can configure siphons
+    - no ERC20 operations can happen
+    - the contract is always paused
+
+    The contract can transition from SETUP to WORKING only after oldRSR is paused.
+    During that transition, the owner is set to the zero address.
+
+    In the WORKING phase:
+    - siphons cannot be changed
+    - ERC20 operations happen as usual
+    - the pauser can pause and unpause the contract
+
+    Once in WORKING, the contract cannot move back to SETUP.
+    */
+    enum Phase {
+        SETUP,
+        WORKING
+    }
+    Phase public phase;
+
     /// Pausing
+    /// Note well that, because of the above about lifecycle phase, whenNotPaused implies isWorking.
     event PauserChanged(address indexed oldPauser, address newPauser);
     address public pauser;
 
@@ -95,6 +118,7 @@ contract RSR is Pausable, Ownable, MageMixin, ERC20Permit {
         fixedSupply = ERC20Pausable(oldRSR_).totalSupply();
         pauser = _msgSender();
         _pause();
+        phase = Phase.SETUP;
     }
 
     // ========================= Modifiers =========================
@@ -117,34 +141,43 @@ contract RSR is Pausable, Ownable, MageMixin, ERC20Permit {
 
     modifier onlyAdminOrPauser() {
         require(
-            _msgSender() == pauser || _msgSender() == regent() || _msgSender() == owner(),
-            "only pauser, regent, or owner"
+            _msgSender() == pauser || _msgSender() == mage() || _msgSender() == owner(),
+            "only pauser, mage, or owner"
         );
+        _;
+    }
+
+    modifier inWorking() {
+        require(phase == Phase.WORKING, "only during working phase");
+        _;
+    }
+    modifier inSetup() {
+        require(phase == Phase.SETUP, "only during setup phase");
         _;
     }
 
     // ========================= Governance =========================
 
+    function moveToWorking() external onlyAdmin inSetup {
+        require(oldRSR.paused(), "waiting for oldRSR to pause");
+        phase = Phase.WORKING;
+        _unpause();
+        _transferOwnership(address(0));
+    }
+
     /// Pause ERC20 + ERC2612 functions
-    function pause() external onlyAdminOrPauser {
+    function pause() external onlyAdminOrPauser inWorking {
         _pause();
     }
 
     /// Unpause ERC20 + ERC2612 functions
-    function unpause() external onlyAdminOrPauser {
-        require(oldRSR.paused(), "waiting for oldRSR to pause");
-        require(owner() == address(0), "owner must be set to zero");
+    function unpause() external onlyAdminOrPauser inWorking {
         _unpause();
     }
 
     function changePauser(address newPauser) external onlyAdminOrPauser {
         emit PauserChanged(pauser, newPauser);
         pauser = newPauser;
-    }
-
-    /// Renounce all ownership of RSR, callable by the Regent / Owner
-    function renounceOwnership() public override onlyAdmin {
-        _transferOwnership(address(0));
     }
 
     // ========================= Weight Management =========================
@@ -159,14 +192,13 @@ contract RSR is Pausable, Ownable, MageMixin, ERC20Permit {
         address oldTo,
         address newTo,
         uint64 weight
-    ) external onlyAdmin whenPaused {
-        require(!oldRSR.paused(), "OldRSR is already paused");
+    ) external onlyAdmin inSetup {
         _siphon(from, oldTo, newTo, weight);
     }
 
     /// Partially crosses an account balance.
     /// Calling this function does not impact final balances after completing account crossing.
-    function partiallyCross(address to, uint256 n) public whenNotPaused {
+    function partiallyCross(address to, uint256 n) public inWorking {
         if (!balCrossed[to]) {
             while (origins[to].length() > 0 && n > 0) {
                 address from = origins[to].at(origins[to].length() - 1);

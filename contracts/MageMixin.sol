@@ -5,33 +5,33 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./Spell.sol";
 
 /**
- * @title MageMixin
- * @dev A very simple mixin that enables the regent spell-casting pattern.
+ * @title Enchantable
+ * @dev A very simple mixin that enables the spell-casting pattern.
  */
-abstract contract MageMixin is Ownable {
-    /// The regent pattern
-    address private _regent;
+abstract contract Enchantable is Ownable {
+    address private _mage;
 
-    event RegentChanged(address oldRegent, address newRegent);
+    event MageChanged(address oldMage, address newMage);
 
     modifier onlyAdmin() {
-        require(_msgSender() == _regent || _msgSender() == owner(), "only regent or owner");
+        require(_msgSender() == _mage || _msgSender() == owner(), "only mage or owner");
         _;
     }
 
-    function regent() public view returns (address) {
-        return _regent;
+    /// At the end of a transaction, mage() should *always* be 0!
+    function mage() public view returns (address) {
+        return _mage;
     }
 
-    /// Grants regent to an Spell, casts the spell, and restore regent
+    /// Grants mage to a Spell, casts the spell, and restore mage
     function castSpell(Spell spell) external onlyOwner {
-        _grantRegent(address(spell));
+        _grantMage(address(spell));
         spell.cast();
-        _grantRegent(address(0));
+        _grantMage(address(0));
     }
 
-    function _grantRegent(address regent_) private {
-        emit RegentChanged(_regent, regent_);
-        _regent = regent_;
+    function _grantMage(address mage_) private {
+        emit MageChanged(_mage, mage_);
+        _mage = mage_;
     }
 }

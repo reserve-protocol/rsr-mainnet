@@ -13,7 +13,7 @@ interface IPausable {
  * @title ForkSpell
  * @dev A one-time-use series of commands to finalize the fork to upgraded RSR.
  *
- * This contract must be the pauser of `oldRSR` and regent of `rsr`
+ * This contract must be the pauser of `oldRSR` and mage of `rsr`
  */
 contract ForkSpell is Spell {
     IPausable public immutable oldRSR;
@@ -25,7 +25,6 @@ contract ForkSpell is Spell {
     /// Pause old RSR, renounce ownership, + unpause new RSR
     function spell() internal override {
         oldRSR.pause();
-        rsr.renounceOwnership();
-        rsr.unpause();
+        rsr.moveToWorking();
     }
 }
