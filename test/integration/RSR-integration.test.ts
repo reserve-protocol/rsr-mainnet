@@ -95,7 +95,7 @@ describe('RSR contract - Mainnet Forking', function () {
     await deployContracts()
   })
 
-  describe('Prior to the fork (SETUP PHASE)', async () => {
+  describe('Prior to pausing OldRSR (Deployment Phase 1)', async () => {
     it('Should start with the total supply of previous RSR', async function () {
       const totalSupplyPrev = await oldRSR.totalSupply()
       expect(await rsr.totalSupply()).to.equal(totalSupplyPrev)
@@ -118,7 +118,7 @@ describe('RSR contract - Mainnet Forking', function () {
       await expect(rsr.connect(companySafe).approve(addr1.address, ONE)).to.be.reverted
     })
 
-    describe('Then the fork (WORKING PHASE)', () => {
+    describe('Then pausing oldRSR (Deployment Phase 2)', () => {
       before(async () => {
         await oldRSR.connect(pauser).addPauser(forkSpell.address)
         await rsr.connect(companySafe).castSpell(forkSpell.address)
@@ -126,13 +126,26 @@ describe('RSR contract - Mainnet Forking', function () {
       it('rsr should be in WORKING', async () => {
         expect(await rsr.phase()).to.eq(Phase.WORKING)
       })
-      it('rsr.owner should be zero', async () => {
-        expect(await rsr.owner()).to.eq(ZERO_ADDRESS)
-      })
-      it('dont allow siphon from the WORKING phase', async () => {
-        await expect(
-          rsr.connect(companySafe).siphon(ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, WEIGHT_ONE)
-        ).to.be.revertedWith('owner')
+
+      describe('Then deploying and casting the SiphonSpell (Deployment Phase 3)', async () => {
+        before(async () => {})
+
+        describe('Then moving to the WORKING phase (Deployment Phase 4)', async () => {
+          before(async () => {
+            await rsr.connect(companySafe).moveToWorking()
+          })
+          it('rsr should be in WORKING', async () => {
+            expect(await rsr.phase()).to.eq(Phase.WORKING)
+          })
+          it('rsr.owner should be zero', async () => {
+            expect(await rsr.owner()).to.eq(ZERO_ADDRESS)
+          })
+          it('dont allow siphon from the WORKING phase', async () => {
+            await expect(
+              rsr.connect(companySafe).siphon(ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, WEIGHT_ONE)
+            ).to.be.revertedWith('owner')
+          })
+        })
       })
     })
   })
