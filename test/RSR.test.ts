@@ -332,7 +332,7 @@ describe('RSR contract', () => {
       await expect(rsr.connect(addr1).transfer(addr2.address, ONE)).to.be.not.reverted
     })
 
-    it.only('should cross balances and allowance when using "transferFrom"', async () => {
+    it('should cross balances and allowance when using "transferFrom"', async () => {
       expect(await rsr.balCrossed(owner.address)).to.equal(false)
       expect(await rsr.allowanceCrossed(owner.address, addr2.address)).to.equal(false)
       expect(await oldRSR.allowance(owner.address, addr2.address)).to.equal(ONE)
