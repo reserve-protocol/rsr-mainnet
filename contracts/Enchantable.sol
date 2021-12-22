@@ -12,6 +12,7 @@ abstract contract Enchantable is Ownable {
     address private _mage;
 
     event MageChanged(address oldMage, address newMage);
+    event SpellCast(address indexed addr);
 
     modifier onlyAdmin() {
         require(_msgSender() == _mage || _msgSender() == owner(), "only mage or owner");
@@ -28,6 +29,7 @@ abstract contract Enchantable is Ownable {
         _grantMage(address(spell));
         spell.cast();
         _grantMage(address(0));
+        emit SpellCast(address(spell));
     }
 
     function _grantMage(address mage_) private {
