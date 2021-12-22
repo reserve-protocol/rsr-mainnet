@@ -65,9 +65,14 @@ describe('RSR contract', () => {
       await setInitialBalances()
     })
 
-    it('dont allow siphon from the WORKING phase', async () => {
+    it.only('dont allow siphon from the WORKING phase', async () => {
       await oldRSR.connect(owner).pause()
-      await rsr.connect(owner).moveToWorking()
+      await expect(rsr.connect(owner).moveToWorking())
+        .to.emit(rsr, 'Unpaused')
+        .withArgs(owner.address)
+        .and.to.emit(rsr, 'OwnershipTransferred')
+        .withArgs(owner.address, ZERO_ADDRESS)
+
       await expect(
         rsr.connect(owner).siphon(ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, WEIGHT_ONE)
       ).to.be.revertedWith('only mage or owner')
