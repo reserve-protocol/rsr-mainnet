@@ -1,5 +1,5 @@
 # Mainnet RSR
-This repo contains the code for a mainnet Reserve Rights token (RSR) that upgrades from a previously deployed version of RSR, found [here](https://github.com/reserve-protocol/rsr).
+This repo contains the code for a mainnet Reserve Rights token (RSR) that upgrades from a previously deployed version of RSR, found [here](https://github.com/reserve-protocol/rsr) and at `0x8762db106b2c2a0bccb3a80d1ed41273552616e8` on Ethereum mainnet.
 
 ## Context
 
@@ -35,27 +35,26 @@ But it's not quite that simple, either. Because gas, we don't want to initialize
 
 Allowance crossings don't need weighted many-to-many distributions, and are thus much simpler.
 
-
-## Naming
-
-The previously deployed version of RSR is referred to in this repo as `OldRSR`. The intended target of this name is the 2019-deployed RSR found at address `0x8762db106b2c2a0bccb3a80d1ed41273552616e8` on Ethereum mainnet. This enables all `RSR` references to be to the newly upgraded 2022 RSR. 
-
 ## Roles
 
 There are 3 roles in the new RSR:
 - Pauser: Can pause and unpause the ERC20 + ERC2612 functions. Intended to eventually be set to the zero address but kept longer than `owner`
-- Mage: Intra-tx role assigned temporarily in order to cast one-use spells. Never the sender of a tx. 
-- Owner: Greatest access role. Intended to be set to the zero address at the time of the fork. 
+- Mage: Intra-tx role assigned temporarily in order to cast one-use spells. Never the sender of a tx and always the zero address at rest
+- Owner: Greatest access role. Held between deployment and forktime, during which it is set to the zero address.
 
 ## Spells
 
 A spell is a contract that implements a one-time series of commands atomically on another contract. Only the owner of RSR can cast spells. 
 
 We have two spells, currently:
-- SiphonSpell: For performing a series of RSR siphons in a single tx. 
+- SiphonSpell: For performing a series of RSR siphons in a single tx in order to prepare weights
 - ForkSpell: For completing the fork to RSR
 
-## Nuance: Total Supply
+## Lifecycle
 
-The total supply of new RSR is fixed at 100 billion. However, due to rounding during crossings, it is possible for the sum of all balances on new RSR to be less than this amount. The delta is on the order of a handful of quanta of RSR, and may even be 0 if there are no complicated siphons.
+RSR is deployed paused, in a Setup state. During this time, instances of the `SiphonSpell` can be cast as the old RSR continues to function. ERC20 + ERC2612 functions revert, and `balanceOf` reads a balance from old RSR. Once the crossing weights of RSR have been prepared sufficiently, the fork can be (nearly) completed by executing `ForkSpell`, pausing old RSR and unpausing the upgraded RSR, as well as setting the owner to zero. At some time after the fork and confirmed proper functioning of the new RSR, the pauser role should also be set to the zero address. 
+
+## ERC20 caveat: Total Supply
+
+The total supply of new RSR is fixed at 100 billion. However, due to rounding during crossings, it is possible for the sum of all balances on new RSR to be less than this amount. The delta is on the order of a handful of quanta of RSR, and may even be 0 if there are no complicated siphons that introduce rounding. 
 
