@@ -21,7 +21,7 @@ contract SiphonSpell is Spell {
 
     /// We expect the number of siphons we need to create to fit into this array.
     /// If you need to make more siphons than will fit, use multiple SiphonSpells.
-    constructor(RSR rsr_, Siphon[] memory siphons_) Spell(rsr_) {
+    constructor(address rsr_, Siphon[] memory siphons_) Spell(rsr_) {
         for (uint256 i = 0; i < siphons_.length; i++) {
             siphons.push(siphons_[i]);
         }
@@ -31,7 +31,7 @@ contract SiphonSpell is Spell {
     function spell() internal override {
         for (uint256 i = 0; i < siphons.length; i++) {
             Siphon storage s = siphons[i];
-            rsr.siphon(s.from, s.from, s.to, s.weight);
+            RSR(rsrAddr).siphon(s.from, s.from, s.to, s.weight);
         }
     }
 }

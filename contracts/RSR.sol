@@ -4,9 +4,9 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
-import "./MageMixin.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "./Enchantable.sol";
 
 /**
  * @title RSR

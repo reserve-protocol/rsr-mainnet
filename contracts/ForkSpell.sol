@@ -18,13 +18,13 @@ interface IPausable {
 contract ForkSpell is Spell {
     IPausable public immutable oldRSR;
 
-    constructor(IPausable oldRSR_, RSR rsr_) Spell(rsr_) {
+    constructor(IPausable oldRSR_, address rsr_) Spell(rsr_) {
         oldRSR = oldRSR_;
     }
 
     /// Pause old RSR, renounce ownership, + unpause new RSR
     function spell() internal override {
         oldRSR.pause();
-        rsr.moveToWorking();
+        RSR(rsrAddr).moveToWorking();
     }
 }
