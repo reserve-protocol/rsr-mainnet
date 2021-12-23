@@ -4,6 +4,9 @@
   "repository": "https://github.com/reserve-protocol/rsr-mainnet.git",
   "author": "Reserve Team",
   "license": "BlueOak-1.0.0",
+  "engines": {
+    "node": ">=10.0.0"
+  },
   "scripts": {
     "compile": "TS_NODE_TRANSPILE_ONLY=1 npx hardhat compile",
     "devchain": "npx hardhat node",

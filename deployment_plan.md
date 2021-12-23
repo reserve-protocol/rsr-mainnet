@@ -33,7 +33,7 @@
     * RSR.phase() is 0 (SETUP)
     * RSR.pauser() is CompanySafe
     * RSR.balanceOf(A) = oldRSR.balanceOf(A), for at least one address A with nonzero balances.
-    * Confirm ForkSpell.rsr() is RSR address
+    * Confirm ForkSpell.rsrAddr() is RSR address
 
 ### Phase 2
 **When?**  The earliest convenient time to use OldPauser after Phase 1.
