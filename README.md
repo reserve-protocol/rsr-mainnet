@@ -1,4 +1,6 @@
 # Mainnet RSR
+[![Tests](https://github.com/reserve-protocol/rsr-mainnet/actions/workflows/tests.yml/badge.svg)](https://github.com/reserve-protocol/rsr-mainnet/actions/workflows/tests.yml)
+
 This repo contains the code for a mainnet Reserve Rights token (RSR) that upgrades from a previously deployed version of RSR, found [here](https://github.com/reserve-protocol/rsr) and at `0x8762db106b2c2a0bccb3a80d1ed41273552616e8` on Ethereum mainnet.
 
 ## Context
