@@ -176,7 +176,7 @@ describe('RSR contract - Mainnet Forking', function () {
       })
 
       // *************** Phase 3 *******************
-      describe.only('Then deploying and casting the SiphonSpell (Deployment Phase 3)', async () => {
+      describe('Then deploying and casting the SiphonSpell (Deployment Phase 3)', async () => {
         before(async () => {
           // deploy + cast siphonspell
           await deploySiphon()
