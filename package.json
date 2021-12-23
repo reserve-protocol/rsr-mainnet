@@ -4,11 +4,14 @@
   "repository": "https://github.com/reserve-protocol/rsr-mainnet.git",
   "author": "Reserve Team",
   "license": "BlueOak-1.0.0",
+  "engines": {
+    "node": ">=10.0.0"
+  },
   "scripts": {
     "compile": "TS_NODE_TRANSPILE_ONLY=1 npx hardhat compile",
     "devchain": "npx hardhat node",
     "size": "npx hardhat size-contracts",
-    "test": "npx solhint 'contracts/**.sol' && npx hardhat test",
+    "test": "npx hardhat test test/*.test.ts test/integration/*.test.ts",
     "test:coverage": "npx hardhat coverage --testfiles 'test/*.test.ts'",
     "test:mainnet": "npx hardhat test test/integration/*.test.ts",
     "test:local": "npx hardhat test test/*.test.ts",
