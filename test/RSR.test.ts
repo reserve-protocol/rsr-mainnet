@@ -1,10 +1,9 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { expect } from 'chai'
 import { signERC2612Permit } from 'eth-permit'
-import { BigNumberish, ContractFactory } from 'ethers'
+import { ContractFactory } from 'ethers'
 import { ethers } from 'hardhat'
-
-import { bn, ONE, ZERO } from '../common/numbers'
+import { ONE, ZERO } from '../common/numbers'
 import { ERC20Mock, ForkSpell, ReserveRightsTokenMock, RSRMock, SiphonSpell } from '../typechain'
 import { Siphon, WEIGHT_ONE, ZERO_ADDRESS } from './common'
 
@@ -59,19 +58,13 @@ describe('RSR contract', () => {
     oldRSR.connect(owner).addPauser(forkSpell.address)
   })
 
-  describe('Deployment', () => {
-    it('should inherit the total supply for the old RSR', async () => {
+  describe('Prior to the fork [SETUP] phase', () => {
+    it('should inherit the total supply of OldRSR', async () => {
       const totalSupplyPrev = await oldRSR.totalSupply()
       expect(await rsr.totalSupply()).to.equal(totalSupplyPrev)
     })
-  })
 
-  describe('Prior to the fork (SETUP phase)', () => {
-    beforeEach(async () => {
-      await setInitialBalances()
-    })
-
-    it('dont allow siphon from the WORKING phase', async () => {
+    it('dont allow siphon from the [WORKING] phase', async () => {
       await oldRSR.connect(owner).pause()
       await expect(rsr.connect(owner).moveToWorking())
         .to.emit(rsr, 'Unpaused')
@@ -82,6 +75,12 @@ describe('RSR contract', () => {
       await expect(
         rsr.connect(owner).siphon(ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, WEIGHT_ONE)
       ).to.be.revertedWith('only mage or owner')
+    })
+
+    it('dont allow RSR move to [WORKING] phase if OldRSR is not paused', async () => {
+      await expect(rsr.connect(owner).moveToWorking()).to.be.revertedWith(
+        'waiting for oldRSR to pause'
+      )
     })
 
     it('dont allow siphon if from is the zero address', async () => {
@@ -96,7 +95,7 @@ describe('RSR contract', () => {
       ).to.be.revertedWith('only mage or owner')
     })
 
-    it('should not allow RSR transfers or approvals until oldRSR is paused', async () => {
+    it('should not allow RSR transfers or approvals during the [SETUP] phase', async () => {
       const permit = await signERC2612Permit(
         ethers.provider,
         rsr.address,
@@ -290,6 +289,13 @@ describe('RSR contract', () => {
       expect(await rsr.balanceOf(addr2.address)).to.eq(ONE)
       expect(await rsr.balanceOf(addr3.address)).to.eq(ONE.mul(3))
     })
+
+    it('should not allow siphons to be done in the WORKING phase', async () => {
+      await rsr.connect(owner).changePhase(1)
+      await expect(
+        rsr.connect(owner).siphon(ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, WEIGHT_ONE)
+      ).to.be.revertedWith('only during setup phase')
+    })
   })
 
   describe('After The Upgrade (WORKING phase)', () => {
@@ -444,6 +450,7 @@ describe('RSR contract', () => {
 
     it('should not allow token transfer to this address', async () => {
       await expect(rsr.connect(owner).transfer(rsr.address, ONE)).to.be.reverted
+      await expect(rsr.connect(owner).transferFrom(owner.address, rsr.address, ONE)).to.be.reverted
     })
 
     describe('Pausing', () => {

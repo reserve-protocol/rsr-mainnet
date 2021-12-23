@@ -9,4 +9,8 @@ contract RSRMock is RSR {
     function oldBal(address account) external view returns (uint256) {
         return _oldBal(account);
     }
+
+    function changePhase(Phase value) external  {
+        phase = value;
+    }
 }
