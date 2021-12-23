@@ -12,7 +12,7 @@ import { impersonate } from './utils/accounts'
 import { ONE, ZERO, bn } from '../../common/numbers'
 import { WEIGHT_ONE, ZERO_ADDRESS } from '../common'
 
-// TODO: Add more siphon test cases when the contract is deployed
+// Note: More siphon tests cases can be added when the contract is deployed
 // For the mainnet fork, only test the first 5 addresses with balances using different weight values
 const mockWeights = [bn('0'), bn('0.5e18'), WEIGHT_ONE, bn('0.2e18'), bn('0.75e18')]
 const mockSiphons = UPGRADE_SIPHONS.slice(0, 5).map((siphon, index) => ({
@@ -24,8 +24,6 @@ const mockSiphons = UPGRADE_SIPHONS.slice(0, 5).map((siphon, index) => ({
 const RSR_PREVIOUS_ADDRESS = '0x8762db106b2c2a0bccb3a80d1ed41273552616e8'
 const RSR_PAUSER_ADDRESS = '0xBb20467EcccB3F60F8dbEca09a61879893e44069'
 const HOLDER_ADDRESS = '0x72A53cDBBcc1b9efa39c834A540550e23463AAcB'
-// const SLOW_WALLET = '0x4903DC97816f99410E8dfFF51149fA4C3CdaD1b8'
-// const MULTISIG_WALLET = '0xb268c230720D16C69a61CBeE24731E3b2a3330A1'
 
 // Accounts
 let addr1: SignerWithAddress
@@ -40,8 +38,6 @@ let oldRSR: ReserveRightsToken
 let rsr: RSR
 let forkSpell: ForkSpell
 let siphonSpell: SiphonSpell
-// let slowWallet: SlowWallet
-// let multisigWallet: MultiSigWalletWithDailyLimit
 
 // RSR Phases (lifecycle)
 const Phase = {
@@ -74,12 +70,6 @@ const setup = async () => {
   // Impersonate accounts
   pauser = await impersonate(RSR_PAUSER_ADDRESS)
   holder = await impersonate(HOLDER_ADDRESS)
-
-  // TODO: Uncomment when testing the wallets
-  // slowWallet = <SlowWallet>await ethers.getContractAt('SlowWallet', SLOW_WALLET)
-  // multisigWallet = <MultiSigWalletWithDailyLimit>(
-  //   await ethers.getContractAt('MultiSigWalletWithDailyLimit', MULTISIG_WALLET)
-  // )
 }
 
 // Deploy new RSR contract
