@@ -3,14 +3,14 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { expect } from 'chai'
 import hre, { ethers } from 'hardhat'
 
+import { bn, ONE, ZERO } from '../../common/numbers'
 import { ForkSpell } from '../../typechain/ForkSpell'
 import { ReserveRightsToken } from '../../typechain/ReserveRightsToken'
 import { RSR } from '../../typechain/RSR'
 import { SiphonSpell } from '../../typechain/SiphonSpell'
+import { WEIGHT_ONE, ZERO_ADDRESS } from '../common'
 import { UPGRADE_SIPHONS } from './../../scripts/deployment/siphon_config'
 import { impersonate } from './utils/accounts'
-import { ONE, ZERO, bn } from '../../common/numbers'
-import { WEIGHT_ONE, ZERO_ADDRESS } from '../common'
 
 // Note: More siphon tests cases can be added when the contract is deployed
 // For the mainnet fork, only test the first 5 addresses with balances using different weight values
@@ -241,6 +241,15 @@ describe('RSR contract - Mainnet Forking', function () {
           })
           it('rsr.pauser should be CompanySafe', async () => {
             expect(await rsr.pauser()).to.eq(companySafe.address)
+          })
+          it('rsr.pauser should be able to be renounced', async () => {
+            await expect(rsr.connect(companySafe).renouncePauser())
+              .to.emit(rsr, 'PauserChanged')
+              .withArgs(companySafe.address, ZERO_ADDRESS)
+            expect(await rsr.pauser()).to.equal(ZERO_ADDRESS)
+            await expect(rsr.connect(companySafe).pause()).to.be.revertedWith(
+              'only pauser, mage, or owner'
+            )
           })
           it('dont allow siphon from the [WORKING] phase', async () => {
             await expect(

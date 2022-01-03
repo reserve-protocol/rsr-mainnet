@@ -181,8 +181,14 @@ contract RSR is Pausable, Ownable, Enchantable, ERC20Permit {
     }
 
     function changePauser(address newPauser) external onlyAdminOrPauser {
+        require(newPauser != address(0), "use renouncePauser");
         emit PauserChanged(pauser, newPauser);
         pauser = newPauser;
+    }
+
+    function renouncePauser() external onlyAdminOrPauser {
+        emit PauserChanged(pauser, address(0));
+        pauser = address(0);
     }
 
     // ========================= Weight Management =========================
