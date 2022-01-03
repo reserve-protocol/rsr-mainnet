@@ -491,11 +491,16 @@ describe('RSR contract', () => {
       })
 
       it('should renouncePauser', async () => {
-        await expect(rsr.connect(owner).renouncePauser())
+        await expect(rsr.connect(owner).changePauser(addr1.address))
           .to.emit(rsr, 'PauserChanged')
-          .withArgs(owner.address, ZERO_ADDRESS)
+          .withArgs(owner.address, addr1.address)
+        expect(await rsr.pauser()).to.equal(addr1.address)
+        await expect(rsr.connect(addr1).renouncePauser())
+          .to.emit(rsr, 'PauserChanged')
+          .withArgs(addr1.address, ZERO_ADDRESS)
         expect(await rsr.pauser()).to.equal(ZERO_ADDRESS)
         await expect(rsr.connect(owner).pause()).to.be.revertedWith('only pauser, mage, or owner')
+        await expect(rsr.connect(addr1).pause()).to.be.revertedWith('only pauser, mage, or owner')
       })
 
       it('should revert transfer', async () => {
