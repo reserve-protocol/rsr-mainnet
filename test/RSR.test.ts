@@ -3,6 +3,7 @@ import { expect } from 'chai'
 import { signERC2612Permit } from 'eth-permit'
 import { ContractFactory } from 'ethers'
 import { ethers } from 'hardhat'
+
 import { ONE, ZERO } from '../common/numbers'
 import { ERC20Mock, ForkSpell, ReserveRightsTokenMock, RSRMock, SiphonSpell } from '../typechain'
 import { Siphon, WEIGHT_ONE, ZERO_ADDRESS } from './common'
@@ -449,13 +450,52 @@ describe('RSR contract', () => {
     })
 
     it('should not allow token transfer to this address', async () => {
-      await expect(rsr.connect(owner).transfer(rsr.address, ONE)).to.be.reverted
-      await expect(rsr.connect(owner).transferFrom(owner.address, rsr.address, ONE)).to.be.reverted
+      await expect(rsr.connect(owner).transfer(rsr.address, ONE)).to.be.revertedWith(
+        'no transfers to this token address'
+      )
+      await expect(
+        rsr.connect(owner).transferFrom(owner.address, rsr.address, ONE)
+      ).to.be.revertedWith('no transfers to this token address')
     })
 
     describe('Pausing', () => {
       beforeEach(async () => {
         await expect(rsr.connect(owner).pause()).to.emit(rsr, 'Paused').withArgs(owner.address)
+      })
+
+      it('should protect changePauser', async () => {
+        await expect(rsr.connect(addr1).changePauser(addr1.address)).to.be.revertedWith(
+          'only pauser'
+        )
+        expect(await rsr.pauser()).to.equal(owner.address)
+      })
+
+      it('should protect renouncePauser', async () => {
+        await expect(rsr.connect(addr1).renouncePauser()).to.be.revertedWith('only pauser')
+        expect(await rsr.pauser()).to.equal(owner.address)
+      })
+
+      it('should change pauser address and unpause', async () => {
+        await expect(rsr.connect(owner).changePauser(addr1.address))
+          .to.emit(rsr, 'PauserChanged')
+          .withArgs(owner.address, addr1.address)
+        expect(await rsr.pauser()).to.equal(addr1.address)
+        await expect(rsr.connect(addr1).unpause()).to.emit(rsr, 'Unpaused').withArgs(addr1.address)
+      })
+
+      it('should not renouncePauser via changePauser', async () => {
+        await expect(rsr.connect(owner).changePauser(ZERO_ADDRESS)).to.be.revertedWith(
+          'use renouncePauser'
+        )
+        expect(await rsr.pauser()).to.equal(owner.address)
+      })
+
+      it('should renouncePauser', async () => {
+        await expect(rsr.connect(owner).renouncePauser())
+          .to.emit(rsr, 'PauserChanged')
+          .withArgs(owner.address, ZERO_ADDRESS)
+        expect(await rsr.pauser()).to.equal(ZERO_ADDRESS)
+        await expect(rsr.connect(owner).pause()).to.be.revertedWith('only pauser, mage, or owner')
       })
 
       it('should revert transfer', async () => {
@@ -502,14 +542,6 @@ describe('RSR contract', () => {
         await expect(rsr.connect(addr1).decreaseAllowance(addr2.address, 1)).to.be.revertedWith(
           'Pausable: paused'
         )
-      })
-
-      it('should change pauser address and unpause', async () => {
-        await expect(rsr.connect(owner).changePauser(addr1.address))
-          .to.emit(rsr, 'PauserChanged')
-          .withArgs(owner.address, addr1.address)
-        expect(await rsr.pauser()).to.equal(addr1.address)
-        await expect(rsr.connect(addr1).unpause()).to.emit(rsr, 'Unpaused').withArgs(addr1.address)
       })
     })
   })
