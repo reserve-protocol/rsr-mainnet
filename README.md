@@ -60,3 +60,8 @@ RSR is deployed paused, in a Setup state. During this time, instances of the `Si
 
 The total supply of new RSR is fixed at 100 billion. However, due to rounding during crossings, it is possible for the sum of all balances on new RSR to be less than this amount. The delta is on the order of a handful of quanta of RSR, and may even be 0 if there are no complicated siphons that introduce rounding. 
 
+## Security
+
+An independent review and audit was performed by [Solidified](https://solidified.io/). The final report is located in the `audits` directory.
+
+All core smart contracts are immutable, and cannot be upgraded. 
