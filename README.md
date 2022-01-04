@@ -64,4 +64,4 @@ The total supply of new RSR is fixed at 100 billion. However, due to rounding du
 
 An independent review and audit was performed by [Solidified](https://solidified.io/). The final report is located in the `audits` directory.
 
-All core smart contracts are immutable, and cannot be upgraded. 
+No contracts can be upgraded. Ownership/Pausership is set to the zero address after the fork in order to reach maximum decentralization. 
