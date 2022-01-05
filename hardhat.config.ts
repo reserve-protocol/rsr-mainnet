@@ -39,6 +39,13 @@ const config: HardhatUserConfig = {
         mnemonic: MNEMONIC,
       },
     },
+    mainnet: {
+      chainId: 1,
+      url: MAINNET_RPC_URL,
+      accounts: {
+        mnemonic: MNEMONIC,
+      },
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
