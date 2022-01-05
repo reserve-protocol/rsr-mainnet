@@ -3,6 +3,27 @@
 
 This repo contains the code for a mainnet Reserve Rights token (RSR) that upgrades from a previously deployed version of RSR, found [here](https://github.com/reserve-protocol/rsr) and at `0x8762db106b2c2a0bccb3a80d1ed41273552616e8` on Ethereum mainnet.
 
+## Deployments
+
+### Network: Mainnet
+
+RSR
+- Pre-mainnet deployment: https://etherscan.io/token/0x8762db106b2c2a0bccb3a80d1ed41273552616e8
+- Post-mainnet deployment: https://etherscan.io/token/0x320623b8e4ff03373931769a31fc52a4e78b5d70
+
+Fork Spell
+- https://etherscan.io/address/0x53b968caf6a1715caa8fa3f0fb63e8d09a6433e1
+
+### Network: Ropsten
+
+RSR
+- Pre-mainnet deployment: https://ropsten.etherscan.io/token/0x58408daf0664dc9ff4645414ce5f9ace059f0470
+- Post-mainnet deployment: https://ropsten.etherscan.io/token/0x320623b8e4ff03373931769a31fc52a4e78b5d70
+
+Fork Spell
+- https://etherscan.io/address/0x53b968caf6a1715caa8fa3f0fb63e8d09a6433e1
+
+
 ## Context
 
 We need to upgrade our old RSR contract, mostly to unlock tokens on the old RSR contract that were "locked forever" -- with the intent of staying locked until our mainnet protocol launch. Now that our mainnet protocol is on its way, we need to deploy an upgraded RSR so that it can be in use in advance of that protocol's launch.

@@ -108,8 +108,8 @@ Add tbd entries as we learn them
 |                          |                                            |
 | Old RSR                  | 0x8762db106b2c2a0bccb3a80d1ed41273552616e8 |
 |                          |                                            |
-| (New) RSR                | tbd                                        |
-| ForkSpell                | tbd                                        |
+| (New) RSR                | 0x320623b8e4ff03373931769a31fc52a4e78b5d70                                        |
+| ForkSpell                | 0x53b968caf6a1715caa8fa3f0fb63e8d09a6433e1                                        |
 | SiphonSpell              | tbd                                        |
 
 
