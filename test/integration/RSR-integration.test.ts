@@ -22,15 +22,18 @@ const mockSiphons = UPGRADE_SIPHONS.slice(0, 5).map((siphon, index) => ({
 
 // Relevant addresses (Mainnet)
 const RSR_PREVIOUS_ADDRESS = '0x8762db106b2c2a0bccb3a80d1ed41273552616e8'
+const RSR_ADDRESS = '0x320623b8E4fF03373931769A31Fc52A4E78B5d70'
+const FORK_SPELL_ADDRESS = '0x53b968CAF6A1715cAA8FA3f0fb63E8D09a6433e1'
+const DEPLOYER_ADDRESS = '0x9f59852571E708791276Acf110D0B31be2756947'
+const COMPANY_SAFE_ADDRESS = '0xA7b123D54BcEc14b4206dAb796982a6d5aaA6770'
 const RSR_PAUSER_ADDRESS = '0xBb20467EcccB3F60F8dbEca09a61879893e44069'
 const HOLDER_ADDRESS = '0x72A53cDBBcc1b9efa39c834A540550e23463AAcB'
 
 // Accounts
 let addr1: SignerWithAddress
-let burner0: SignerWithAddress
 let burner1: SignerWithAddress
 let burner2: SignerWithAddress
-let companySafe: SignerWithAddress
+let companySafe: JsonRpcSigner
 let pauser: JsonRpcSigner
 let holder: JsonRpcSigner
 // Contracts
@@ -47,7 +50,7 @@ const Phase = {
 
 // Setup test environment
 const setup = async () => {
-  ;[addr1, burner0, burner1, burner2, companySafe] = await ethers.getSigners()
+  ;[addr1, burner1, burner2] = await ethers.getSigners()
 
   // Use Mainnet fork
   await hre.network.provider.request({
@@ -56,7 +59,7 @@ const setup = async () => {
       {
         forking: {
           jsonRpcUrl: process.env.MAINNET_RPC_URL,
-          blockNumber: 13810440,
+          blockNumber: 13947052,
         },
       },
     ],
@@ -66,25 +69,19 @@ const setup = async () => {
   oldRSR = <ReserveRightsToken>(
     await ethers.getContractAt('ReserveRightsToken', RSR_PREVIOUS_ADDRESS)
   )
+  rsr = <RSR>await ethers.getContractAt('RSR', RSR_ADDRESS)
+  forkSpell = <ForkSpell>await ethers.getContractAt('ForkSpell', FORK_SPELL_ADDRESS)
 
   // Impersonate accounts
   pauser = await impersonate(RSR_PAUSER_ADDRESS)
   holder = await impersonate(HOLDER_ADDRESS)
-}
-
-// Deploy new RSR contract
-const deployRSR = async () => {
-  const RSR = await ethers.getContractFactory('RSR')
-  rsr = <RSR>await RSR.connect(burner0).deploy(oldRSR.address)
-
-  await rsr.connect(burner0).changePauser(companySafe.address)
-  await rsr.connect(burner0).transferOwnership(companySafe.address)
+  companySafe = await impersonate(COMPANY_SAFE_ADDRESS)
 }
 
 // Deploy fork spell for RSR
 const deployForkSpell = async () => {
   const ForkSpellFactory = await ethers.getContractFactory('ForkSpell')
-  forkSpell = <ForkSpell>await ForkSpellFactory.connect(burner1).deploy(oldRSR.address, rsr.address)
+  return <Promise<ForkSpell>>ForkSpellFactory.connect(burner1).deploy(oldRSR.address, rsr.address)
 }
 
 // Deploy siphon contract
@@ -100,10 +97,6 @@ describe('RSR contract - Mainnet Forking', function () {
 
   // *************** Phase 1 *******************
   describe('Prior to pausing OldRSR (Deployment Phase 1)', async () => {
-    before(async () => {
-      await deployRSR()
-    })
-
     it('should start with the total supply of OldRSR', async function () {
       const totalSupplyPrev = await oldRSR.totalSupply()
       expect(await rsr.totalSupply()).to.eq(totalSupplyPrev)
@@ -114,9 +107,13 @@ describe('RSR contract - Mainnet Forking', function () {
       expect(await rsr.phase()).to.eq(Phase.SETUP)
     })
 
+    it('RSR deployer address should no longer be the owner', async () => {
+      expect(await rsr.owner()).to.not.eq(DEPLOYER_ADDRESS)
+    })
+
     it('RSR owner and pauser should be the companySafe address', async () => {
-      expect(await rsr.owner()).to.eq(companySafe.address)
-      expect(await rsr.pauser()).to.eq(companySafe.address)
+      expect(await rsr.owner()).to.eq(companySafe._address)
+      expect(await rsr.pauser()).to.eq(companySafe._address)
     })
 
     it('RSR should not be able to be unpaused during the [SETUP] phase', async () => {
@@ -240,12 +237,12 @@ describe('RSR contract - Mainnet Forking', function () {
             expect(await rsr.mage()).to.eq(ZERO_ADDRESS)
           })
           it('rsr.pauser should be CompanySafe', async () => {
-            expect(await rsr.pauser()).to.eq(companySafe.address)
+            expect(await rsr.pauser()).to.eq(companySafe._address)
           })
           it('rsr.pauser should be able to be renounced', async () => {
             await expect(rsr.connect(companySafe).renouncePauser())
               .to.emit(rsr, 'PauserChanged')
-              .withArgs(companySafe.address, ZERO_ADDRESS)
+              .withArgs(companySafe._address, ZERO_ADDRESS)
             expect(await rsr.pauser()).to.equal(ZERO_ADDRESS)
             await expect(rsr.connect(companySafe).pause()).to.be.revertedWith(
               'only pauser, mage, or owner'
