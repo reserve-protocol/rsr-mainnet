@@ -27,7 +27,7 @@ const config: HardhatUserConfig = {
     hardhat: {
       forking: {
         url: MAINNET_RPC_URL,
-        blockNumber: 13810440,
+        blockNumber: 13947052,
         enabled: process.env.FORK !== undefined,
       },
       gas: 'auto',

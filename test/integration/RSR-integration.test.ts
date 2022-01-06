@@ -167,6 +167,10 @@ describe('RSR contract - Mainnet Forking', function () {
         before(async () => {
           // deploy + cast siphonspell
           await deploySiphon()
+          await hre.network.provider.send('hardhat_setBalance', [
+            companySafe._address,
+            '0x100000000000000000000000',
+          ])
           await rsr.connect(companySafe).castSpell(siphonSpell.address)
         })
 
