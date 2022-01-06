@@ -1,7 +1,10 @@
 # Mainnet RSR
 [![Tests](https://github.com/reserve-protocol/rsr-mainnet/actions/workflows/tests.yml/badge.svg)](https://github.com/reserve-protocol/rsr-mainnet/actions/workflows/tests.yml)
 
-This repo contains the code for a mainnet Reserve Rights token (RSR) that upgrades from a previously deployed version of RSR, found [here](https://github.com/reserve-protocol/rsr) and at `0x8762db106b2c2a0bccb3a80d1ed41273552616e8` on Ethereum mainnet.
+This repo contains the code for a mainnet Reserve Rights token (RSR), on Ethereum at `0x320623b8e4ff03373931769a31fc52a4e78b5d70`, to be activated on Jan 13 at 4pm Pacific Time. The major content of this contract is its ability to fork balances from the old, paused contract.
+
+This is a token fork from a [previously deployed version of RSR](https://github.com/reserve-protocol/rsr), on Ethereum at `0x8762db106b2c2a0bccb3a80d1ed41273552616e8`. When the new RSR is activated, the Reserve team will permanently pause this old RSR contract.
+
 
 ## Deployments
 
