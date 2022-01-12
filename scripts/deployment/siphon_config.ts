@@ -42,12 +42,12 @@ export const UPGRADE_SIPHONS: Siphon[] = [
   },
   {
     from: '0xc4bf963aa86f272af84796c160598d326e6d3078',
-    weight: bn('0.043e18'),
+    weight: bn('0.0435e18'),
     to: '0xD25096bcd013dAFBeC27c785Cf79D58Acf3c3092',
   },
   {
     from: '0xc4bf963aa86f272af84796c160598d326e6d3078',
-    weight: bn('0.043e18'),
+    weight: bn('0.0435e18'),
     to: '0x5475f3Bf6b325b5f141740AD93daE50B5Aae3fbd',
   },
   {
@@ -77,12 +77,12 @@ export const UPGRADE_SIPHONS: Siphon[] = [
   },
   {
     from: '0xc4bf963aa86f272af84796c160598d326e6d3078',
-    weight: bn('0.043e18'),
+    weight: bn('0.0435e18'),
     to: '0x3423153ef621FacD3AB474DF87F4AFe8f5E3CC9B',
   },
   {
     from: '0xc4bf963aa86f272af84796c160598d326e6d3078',
-    weight: bn('0.043e18'),
+    weight: bn('0.0435e18'),
     to: '0xcC544A65aBD12007190240D68EF88AA0E5a5a0c3',
   },
   {
@@ -107,12 +107,12 @@ export const UPGRADE_SIPHONS: Siphon[] = [
   },
   {
     from: '0xc4bf963aa86f272af84796c160598d326e6d3078',
-    weight: bn('0.043e18'),
+    weight: bn('0.0435e18'),
     to: '0x5bCEDD2dB60F4994863e85fc69cFE0EDc1392FF0',
   },
   {
     from: '0xc4bf963aa86f272af84796c160598d326e6d3078',
-    weight: bn('0.043e18'),
+    weight: bn('0.0435e18'),
     to: '0x1d1A4Ee2B1f427776E28418e9573B742F6cB28B9',
   },
   {
@@ -152,7 +152,7 @@ export const UPGRADE_SIPHONS: Siphon[] = [
   },
   {
     from: '0x8ad9c8ebe26eadab9251b8fc36cd06a1ec399a7f',
-    weight: fp('0.1e18'),
+    weight: bn('0.1e18'),
     to: '0xcb3b9173E65e64F66618a7bf88ea456f9e4983d9',
   },
   {
