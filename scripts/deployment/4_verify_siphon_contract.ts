@@ -1,7 +1,8 @@
 import hre from 'hardhat'
+
 import { getChainId } from '../../common/blockchain-utils'
-import { networkConfig, developmentChains } from '../../common/configuration'
-import { IDeployments, getDeploymentFilename, getDeploymentFile } from './deployment_utils'
+import { developmentChains, networkConfig } from '../../common/configuration'
+import { getDeploymentFile, getDeploymentFilename, IDeployments } from './deployment_utils'
 import { UPGRADE_SIPHONS } from './siphon_config'
 
 let deployments: IDeployments
@@ -17,7 +18,7 @@ async function main() {
     throw new Error(`Cannot verify contracts for development chain ${hre.network.name}`)
   }
 
-  deployments = getDeploymentFile(getDeploymentFilename(chainId), chainId)
+  deployments = getDeploymentFile(getDeploymentFilename(chainId))
 
   /** ******************** Verify Siphon Spell ****************************************/
   if (deployments.siphonSpell) {

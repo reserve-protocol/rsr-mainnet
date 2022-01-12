@@ -1,9 +1,10 @@
 import fs from 'fs'
 import hre, { ethers } from 'hardhat'
+
 import { getChainId, isValidContract } from '../../common/blockchain-utils'
 import { networkConfig } from '../../common/configuration'
-import { getDeploymentFile, getDeploymentFilename } from './deployment_utils'
 import { SiphonSpell } from '../../typechain'
+import { getDeploymentFile, getDeploymentFilename } from './deployment_utils'
 import { UPGRADE_SIPHONS } from './siphon_config'
 
 async function main() {
@@ -19,7 +20,7 @@ async function main() {
   }
 
   const deploymentFilename = getDeploymentFilename(chainId)
-  const deployments = getDeploymentFile(deploymentFilename, chainId)
+  const deployments = getDeploymentFile(deploymentFilename)
 
   if (!deployments.rsr) {
     throw new Error(`Missing address for RSR in network ${hre.network.name}`)
