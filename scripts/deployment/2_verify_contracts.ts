@@ -17,7 +17,7 @@ async function main() {
     throw new Error(`Cannot verify contracts for development chain ${hre.network.name}`)
   }
 
-  deployments = getDeploymentFile(getDeploymentFilename(chainId), chainId)
+  deployments = getDeploymentFile(getDeploymentFilename(chainId))
 
   /** ******************** Verify RSR contract ****************************************/
   console.time('Verifying RSR')
