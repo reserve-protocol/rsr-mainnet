@@ -5,6 +5,7 @@ export interface IDeployments {
   rsr: string
   forkSpell: string
   siphonSpell: string
+  slowWallet: string
 }
 
 const tempFileSuffix: string = '-tmp-deployments.json'
@@ -22,7 +23,7 @@ export const fileExists = (file: string): boolean => {
   }
 }
 
-export const getDeploymentFile = (path: string, chainId: string): IDeployments => {
+export const getDeploymentFile = (path: string): IDeployments => {
   if (!fileExists(path)) {
     throw new Error(`Deployment file ${path} does not exist. Maybe contracts weren't deployed?`)
   }

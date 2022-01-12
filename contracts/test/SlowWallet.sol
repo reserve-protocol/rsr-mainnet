@@ -1,9 +1,5 @@
 // solhint-disable-file
 // SPDX-License-Identifier: BlueOak-1.0.0
-/**
- *
- * Etherscan verified on 2019-05-20
- */
 
 pragma solidity ^0.5.8;
 
@@ -13,11 +9,21 @@ pragma solidity ^0.5.8;
  */
 interface IERC20 {
     function transfer(address, uint256) external returns (bool);
+
     function approve(address, uint256) external returns (bool);
-    function transferFrom(address, address, uint256) external returns (bool);
+
+    function transferFrom(
+        address,
+        address,
+        uint256
+    ) external returns (bool);
+
     function totalSupply() external view returns (uint256);
+
     function balanceOf(address) external view returns (uint256);
+
     function allowance(address, address) external view returns (uint256);
+
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed holder, address indexed spender, uint256 value);
 }
@@ -26,7 +32,6 @@ interface IERC20 {
 /// Can only transfer tokens after publicly recording the intention to do so
 /// at least two weeks in advance.
 contract SlowWallet {
-
     // TYPES
 
     struct TransferProposal {
@@ -45,7 +50,7 @@ contract SlowWallet {
 
     // PROPOSALS
 
-    mapping (uint256 => TransferProposal) public proposals;
+    mapping(uint256 => TransferProposal) public proposals;
     uint256 public proposalsLength;
 
     // EVENTS
@@ -57,15 +62,25 @@ contract SlowWallet {
         uint256 delayUntil,
         string notes
     );
-    event TransferConfirmed(uint256 index, address indexed destination, uint256 value, string notes);
-    event TransferCancelled(uint256 index, address indexed destination, uint256 value, string notes);
+    event TransferConfirmed(
+        uint256 index,
+        address indexed destination,
+        uint256 value,
+        string notes
+    );
+    event TransferCancelled(
+        uint256 index,
+        address indexed destination,
+        uint256 value,
+        string notes
+    );
     event AllTransfersCancelled();
 
     // FUNCTIONALITY
 
-    constructor(address tokenAddress) public {
+    constructor(address tokenAddress, address owner_) public {
         token = IERC20(tokenAddress);
-        owner = msg.sender;
+        owner = owner_;
     }
 
     modifier onlyOwner() {
@@ -74,7 +89,11 @@ contract SlowWallet {
     }
 
     /// Propose a new transfer, which can be confirmed after two weeks.
-    function propose(address destination, uint256 value, string calldata notes) external onlyOwner {
+    function propose(
+        address destination,
+        uint256 value,
+        string calldata notes
+    ) external onlyOwner {
         // Delay by at least two weeks.
         // We are relying on block.timestamp for this, and aware of the possibility of its
         // manipulation by miners. But we are working at a timescale that is already much
@@ -93,11 +112,15 @@ contract SlowWallet {
         });
         proposalsLength++;
 
-        emit TransferProposed(proposalsLength-1, destination, value, delayUntil, notes);
+        emit TransferProposed(proposalsLength - 1, destination, value, delayUntil, notes);
     }
 
     /// Cancel a proposed transfer.
-    function cancel(uint256 index, address addr, uint256 value) external onlyOwner {
+    function cancel(
+        uint256 index,
+        address addr,
+        uint256 value
+    ) external onlyOwner {
         // Check authorization.
         requireMatchingOpenProposal(index, addr, value);
 
@@ -113,7 +136,11 @@ contract SlowWallet {
     }
 
     /// Confirm and execute a proposed transfer, if enough time has passed since it was proposed.
-    function confirm(uint256 index, address destination, uint256 value) external onlyOwner {
+    function confirm(
+        uint256 index,
+        address destination,
+        uint256 value
+    ) external onlyOwner {
         // Check authorization.
         requireMatchingOpenProposal(index, destination, value);
 
@@ -130,7 +157,11 @@ contract SlowWallet {
     }
 
     /// Throw unless the given transfer proposal exists and matches `destination` and `value`.
-    function requireMatchingOpenProposal(uint256 index, address destination, uint256 value) private view {
+    function requireMatchingOpenProposal(
+        uint256 index,
+        address destination,
+        uint256 value
+    ) private view {
         require(index < proposalsLength, "index too high, or transfer voided");
         require(!proposals[index].closed, "transfer already closed");
 
