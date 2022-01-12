@@ -78,9 +78,9 @@ contract SlowWallet {
 
     // FUNCTIONALITY
 
-    constructor(address tokenAddress) public {
+    constructor(address tokenAddress, address owner_) public {
         token = IERC20(tokenAddress);
-        owner = msg.sender;
+        owner = owner_;
     }
 
     modifier onlyOwner() {
