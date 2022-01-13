@@ -15,6 +15,28 @@ import { impersonate } from './utils/accounts'
 // Note: More siphon tests cases can be added when the contract is deployed
 // For the mainnet fork, only test the first 5 addresses with balances using different weight values
 const realSiphons = UPGRADE_SIPHONS
+const siphonAddresses = realSiphons.reduce((prev, current) => {
+  prev.add(current.from)
+  prev.add(current.to)
+  return prev
+}, <Set<string>>new Set())
+
+const holderAddresses = JSON.parse(
+  require('fs').readFileSync(
+    require('path').join(__dirname, '/utils/holder-account-list.json'),
+    'utf8'
+  )
+)
+const normalHolders: string[] = []
+const siphonedHolders: string[] = []
+
+for (const holderAddress of holderAddresses) {
+  if (siphonAddresses.has(holderAddress)) {
+    siphonedHolders.push(holderAddress)
+  } else {
+    normalHolders.push(holderAddress)
+  }
+}
 
 // Relevant addresses (Mainnet)
 const RSR_PREVIOUS_ADDRESS = '0x8762db106b2c2a0bccb3a80d1ed41273552616e8'
@@ -52,7 +74,7 @@ const setup = async () => {
       {
         forking: {
           jsonRpcUrl: process.env.MAINNET_RPC_URL,
-          blockNumber: 13998722,
+          blockNumber: 13999720,
         },
       },
     ],
@@ -167,10 +189,9 @@ describe('RSR contract - Mainnet Forking', function () {
         before(async () => {
           // deploy + cast siphonspell
           await setSiphonSpell()
-          await rsr.connect(companySafe).castSpell(siphonSpell.address)
         })
 
-        it.only('the siphon spell should have been executed', async () => {
+        it('the siphon spell should have been executed', async () => {
           expect(await siphonSpell.hasBeenCast()).to.eq(true)
         })
 
@@ -186,29 +207,6 @@ describe('RSR contract - Mainnet Forking', function () {
             expect(await rsr.weights(siphon.from, siphon.to)).to.eq(siphon.weight)
           }
         })
-
-        // it('a newly deployed siphon spell can be called to change weights', async () => {
-        //   // This siphon send all the balance from the first mockSiphon address to a hardhat mock address
-        //   // await setSiphonSpell([
-        //   //   { from: realSiphons[0].from, to: addr1.address, weight: WEIGHT_ONE },
-        //   // ])
-
-        //   await expect(rsr.connect(companySafe).castSpell(siphonSpell.address))
-        //     .to.emit(rsr, 'MageChanged')
-        //     .withArgs(ZERO_ADDRESS, siphonSpell.address)
-        //     .and.to.emit(rsr, 'MageChanged')
-        //     .withArgs(siphonSpell.address, ZERO_ADDRESS)
-        //     .and.to.emit(rsr, 'SpellCast')
-        //     .withArgs(siphonSpell.address)
-        // })
-
-        // it('balance of newly affected addresses by the siphon should be updated', async () => {
-        //   expect(await rsr.weights(realSiphons[0].from, addr1.address)).to.eq(WEIGHT_ONE)
-        //   // Balance of the first address of the first siphons
-        //   expect(await rsr.balanceOf(addr1.address)).to.eq(
-        //     await oldRSR.balanceOf(realSiphons[0].from)
-        //   )
-        // })
 
         it('rsr balances of addresses with weights should not be crossed', async () => {
           for (const siphon of realSiphons) {
@@ -260,33 +258,16 @@ describe('RSR contract - Mainnet Forking', function () {
               rsr.connect(companySafe).siphon(ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, WEIGHT_ONE)
             ).to.be.revertedWith('owner')
           })
-          // it('balances should be updated according to previously spelled siphons', async () => {
-          //   for (const siphon of realSiphons.slice(1)) {
-          //     const currentBal = await rsr.balanceOf(siphon.from)
-          //     const oldBal = await oldRSR.balanceOf(siphon.from)
 
-          //     // weight 0, balance unchanged
-          //     if (siphon.weight.eq(bn(0))) {
-          //       expect(currentBal).to.eq(oldBal)
-          //     } else {
-          //       expect(currentBal).to.not.eq(oldBal)
+          // First 100 addresses
+          it('not siphoned account balances should be the same on both RSR contracts', async () => {
+            for (const holderAddress of normalHolders.slice(0, 100)) {
+              expect(await rsr.balanceOf(holderAddress)).to.eq(
+                await oldRSR.balanceOf(holderAddress)
+              )
+            }
+          })
 
-          //       // if the siphon weight is one, new balance should be 0
-          //       if (siphon.weight === WEIGHT_ONE) {
-          //         expect(currentBal).to.eq(ZERO)
-          //       } else {
-          //         const substracted = oldBal.mul(siphon.weight).div(WEIGHT_ONE)
-          //         // If the weight is a fraction, the new balance should match that fraction calculation
-          //         expect(currentBal).to.eq(oldBal.sub(substracted))
-          //       }
-          //     }
-          //   }
-          //   // Second runned siphon
-          //   expect(await rsr.balanceOf(realSiphons[0].from)).to.eq(bn(0))
-          //   expect(await rsr.balanceOf(addr1.address)).to.eq(
-          //     await oldRSR.balanceOf(realSiphons[0].from)
-          //   )
-          // })
           it('account with no weight have their balance unchanged', async () => {
             expect(await oldRSR.balanceOf(holder._address)).to.eq(
               await rsr.balanceOf(holder._address)
