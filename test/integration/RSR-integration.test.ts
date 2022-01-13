@@ -16,6 +16,28 @@ import siphons from './utils/siphons'
 // Note: More siphon tests cases can be added when the contract is deployed
 // For the mainnet fork, only test the first 5 addresses with balances using different weight values
 const realSiphons = UPGRADE_SIPHONS
+const siphonAddresses = realSiphons.reduce((prev, current) => {
+  prev.add(current.from)
+  prev.add(current.to)
+  return prev
+}, <Set<string>>new Set())
+
+const holderAddresses = JSON.parse(
+  require('fs').readFileSync(
+    require('path').join(__dirname, '/utils/holder-account-list.json'),
+    'utf8'
+  )
+)
+const normalHolders: string[] = []
+const siphonedHolders: string[] = []
+
+for (const holderAddress of holderAddresses) {
+  if (siphonAddresses.has(holderAddress)) {
+    siphonedHolders.push(holderAddress)
+  } else {
+    normalHolders.push(holderAddress)
+  }
+}
 
 // Relevant addresses (Mainnet)
 const RSR_PREVIOUS_ADDRESS = '0x8762db106b2c2a0bccb3a80d1ed41273552616e8'
@@ -235,7 +257,7 @@ describe('RSR contract - Mainnet Forking', function () {
 
           // First 100 addresses
           it('not siphoned account balances should be the same on both RSR contracts', async () => {
-            for (const holderAddress of siphons.holders.slice(0, 100)) {
+            for (const holderAddress of normalHolders.slice(0, 100)) {
               expect(await rsr.balanceOf(holderAddress)).to.eq(
                 await oldRSR.balanceOf(holderAddress)
               )
