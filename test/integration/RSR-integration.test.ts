@@ -10,33 +10,12 @@ import { RSR } from '../../typechain/RSR'
 import { SiphonSpell } from '../../typechain/SiphonSpell'
 import { WEIGHT_ONE, ZERO_ADDRESS } from '../common'
 import { UPGRADE_SIPHONS } from './../../scripts/deployment/siphon_config'
-import { impersonate } from './utils/accounts'
+import { impersonate, fund } from './utils/accounts'
+import siphons from './utils/siphons'
 
 // Note: More siphon tests cases can be added when the contract is deployed
 // For the mainnet fork, only test the first 5 addresses with balances using different weight values
 const realSiphons = UPGRADE_SIPHONS
-const siphonAddresses = realSiphons.reduce((prev, current) => {
-  prev.add(current.from)
-  prev.add(current.to)
-  return prev
-}, <Set<string>>new Set())
-
-const holderAddresses = JSON.parse(
-  require('fs').readFileSync(
-    require('path').join(__dirname, '/utils/holder-account-list.json'),
-    'utf8'
-  )
-)
-const normalHolders: string[] = []
-const siphonedHolders: string[] = []
-
-for (const holderAddress of holderAddresses) {
-  if (siphonAddresses.has(holderAddress)) {
-    siphonedHolders.push(holderAddress)
-  } else {
-    normalHolders.push(holderAddress)
-  }
-}
 
 // Relevant addresses (Mainnet)
 const RSR_PREVIOUS_ADDRESS = '0x8762db106b2c2a0bccb3a80d1ed41273552616e8'
@@ -80,10 +59,7 @@ const setup = async () => {
     ],
   })
 
-  await hre.network.provider.send('hardhat_setBalance', [
-    COMPANY_SAFE_ADDRESS,
-    '0x100000000000000000000000',
-  ])
+  await fund(COMPANY_SAFE_ADDRESS)
 
   // Retrieve Deployed contracts
   oldRSR = <ReserveRightsToken>(
@@ -107,8 +83,6 @@ const setForkSpell = async () => {
 
 // Deploy siphon contract
 const setSiphonSpell = async () => {
-  // const SiphonSpellfactory = await ethers.getContractFactory('SiphonSpell')
-  // siphonSpell = <SiphonSpell>await SiphonSpellfactory.connect(burner2).deploy(rsr.address, siphons)
   siphonSpell = <SiphonSpell>await ethers.getContractAt('SiphonSpell', SIPHON_SPELL_ADDRESS)
 }
 
@@ -261,22 +235,33 @@ describe('RSR contract - Mainnet Forking', function () {
 
           // First 100 addresses
           it('not siphoned account balances should be the same on both RSR contracts', async () => {
-            for (const holderAddress of normalHolders.slice(0, 100)) {
+            for (const holderAddress of siphons.holders.slice(0, 100)) {
               expect(await rsr.balanceOf(holderAddress)).to.eq(
                 await oldRSR.balanceOf(holderAddress)
               )
             }
           })
 
-          it('account with no weight have their balance unchanged', async () => {
-            expect(await oldRSR.balanceOf(holder._address)).to.eq(
-              await rsr.balanceOf(holder._address)
-            )
+          it('accounts with siphoned balances should match the expected result', async () => {
+            for (const [address, value] of Object.entries(siphons.expectedBalances)) {
+              expect((await rsr.balanceOf(address)).div(bn('1e15'))).to.closeTo(
+                bn(value.replace('.', '')),
+                10
+              )
+            }
           })
+
           it('balances should be crossed when doing a transfer', async () => {
-            expect(await rsr.balCrossed(holder._address)).to.eq(false)
-            await rsr.connect(holder).transfer(holder._address, ZERO)
-            expect(await rsr.balCrossed(holder._address)).to.eq(true)
+            for (const address of Object.keys(siphons.expectedBalances).slice(0, 20)) {
+              // Add some eth
+              await fund(address)
+
+              const prevBalance = await rsr.balanceOf(address)
+              expect(await rsr.balCrossed(address)).to.eq(false)
+              await rsr.connect(await impersonate(address)).transfer(address, ZERO)
+              expect(await rsr.balCrossed(address)).to.eq(true)
+              expect(prevBalance).to.equal(await rsr.balanceOf(address))
+            }
           })
         })
       })
