@@ -1,10 +1,11 @@
+import { BigNumber } from 'ethers'
+
 import { bn } from '../../common/numbers'
-import { BigNumberish } from 'ethers'
 
 type Siphon = {
   from: string
   to: string
-  weight: BigNumberish
+  weight: BigNumber
 }
 
 // Upgrade siphons

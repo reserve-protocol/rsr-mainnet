@@ -14,24 +14,20 @@ import { impersonate } from './utils/accounts'
 
 // Note: More siphon tests cases can be added when the contract is deployed
 // For the mainnet fork, only test the first 5 addresses with balances using different weight values
-const mockWeights = [bn('0'), bn('0.5e18'), WEIGHT_ONE, bn('0.2e18'), bn('0.75e18')]
-const mockSiphons = UPGRADE_SIPHONS.slice(0, 5).map((siphon, index) => ({
-  ...siphon,
-  weight: mockWeights[index],
-}))
+const realSiphons = UPGRADE_SIPHONS
 
 // Relevant addresses (Mainnet)
 const RSR_PREVIOUS_ADDRESS = '0x8762db106b2c2a0bccb3a80d1ed41273552616e8'
-const RSR_PAUSER_ADDRESS = '0xBb20467EcccB3F60F8dbEca09a61879893e44069'
+const RSR_NEW_ADDRESS = '0x320623b8e4ff03373931769a31fc52a4e78b5d70'
 const HOLDER_ADDRESS = '0x72A53cDBBcc1b9efa39c834A540550e23463AAcB'
+const SIPHON_SPELL_ADDRESS = '0x3eb1438b1edff7d899a863d4792e8d8f7d455277'
+const COMPANY_SAFE_ADDRESS = '0xA7b123D54BcEc14b4206dAb796982a6d5aaA6770'
+const FORK_SPELL_ADDRESS = '0x53b968caf6a1715caa8fa3f0fb63e8d09a6433e1'
+const SLOW_WALLET_ADDRESS = '0x6bab6EB87Aa5a1e4A8310C73bDAAA8A5dAAd81C1'
 
 // Accounts
 let addr1: SignerWithAddress
-let burner0: SignerWithAddress
-let burner1: SignerWithAddress
-let burner2: SignerWithAddress
-let companySafe: SignerWithAddress
-let pauser: JsonRpcSigner
+let companySafe: JsonRpcSigner
 let holder: JsonRpcSigner
 // Contracts
 let oldRSR: ReserveRightsToken
@@ -47,7 +43,7 @@ const Phase = {
 
 // Setup test environment
 const setup = async () => {
-  ;[addr1, burner0, burner1, burner2, companySafe] = await ethers.getSigners()
+  ;[addr1] = await ethers.getSigners()
 
   // Use Mainnet fork
   await hre.network.provider.request({
@@ -56,11 +52,16 @@ const setup = async () => {
       {
         forking: {
           jsonRpcUrl: process.env.MAINNET_RPC_URL,
-          blockNumber: 13810440,
+          blockNumber: 13998722,
         },
       },
     ],
   })
+
+  await hre.network.provider.send('hardhat_setBalance', [
+    COMPANY_SAFE_ADDRESS,
+    '0x100000000000000000000000',
+  ])
 
   // Retrieve Deployed contracts
   oldRSR = <ReserveRightsToken>(
@@ -68,29 +69,25 @@ const setup = async () => {
   )
 
   // Impersonate accounts
-  pauser = await impersonate(RSR_PAUSER_ADDRESS)
+  companySafe = await impersonate(COMPANY_SAFE_ADDRESS)
   holder = await impersonate(HOLDER_ADDRESS)
 }
 
 // Deploy new RSR contract
-const deployRSR = async () => {
-  const RSR = await ethers.getContractFactory('RSR')
-  rsr = <RSR>await RSR.connect(burner0).deploy(oldRSR.address)
-
-  await rsr.connect(burner0).changePauser(companySafe.address)
-  await rsr.connect(burner0).transferOwnership(companySafe.address)
+const setRSR = async () => {
+  rsr = <RSR>await ethers.getContractAt('RSR', RSR_NEW_ADDRESS)
 }
 
 // Deploy fork spell for RSR
-const deployForkSpell = async () => {
-  const ForkSpellFactory = await ethers.getContractFactory('ForkSpell')
-  forkSpell = <ForkSpell>await ForkSpellFactory.connect(burner1).deploy(oldRSR.address, rsr.address)
+const setForkSpell = async () => {
+  forkSpell = <ForkSpell>await ethers.getContractAt('ForkSpell', FORK_SPELL_ADDRESS)
 }
 
 // Deploy siphon contract
-const deploySiphon = async (siphons = mockSiphons) => {
-  const SiphonSpellfactory = await ethers.getContractFactory('SiphonSpell')
-  siphonSpell = <SiphonSpell>await SiphonSpellfactory.connect(burner2).deploy(rsr.address, siphons)
+const setSiphonSpell = async () => {
+  // const SiphonSpellfactory = await ethers.getContractFactory('SiphonSpell')
+  // siphonSpell = <SiphonSpell>await SiphonSpellfactory.connect(burner2).deploy(rsr.address, siphons)
+  siphonSpell = <SiphonSpell>await ethers.getContractAt('SiphonSpell', SIPHON_SPELL_ADDRESS)
 }
 
 describe('RSR contract - Mainnet Forking', function () {
@@ -101,7 +98,7 @@ describe('RSR contract - Mainnet Forking', function () {
   // *************** Phase 1 *******************
   describe('Prior to pausing OldRSR (Deployment Phase 1)', async () => {
     before(async () => {
-      await deployRSR()
+      await setRSR()
     })
 
     it('should start with the total supply of OldRSR', async function () {
@@ -115,8 +112,8 @@ describe('RSR contract - Mainnet Forking', function () {
     })
 
     it('RSR owner and pauser should be the companySafe address', async () => {
-      expect(await rsr.owner()).to.eq(companySafe.address)
-      expect(await rsr.pauser()).to.eq(companySafe.address)
+      expect(await rsr.owner()).to.eq(companySafe._address)
+      expect(await rsr.pauser()).to.eq(companySafe._address)
     })
 
     it('RSR should not be able to be unpaused during the [SETUP] phase', async () => {
@@ -147,18 +144,18 @@ describe('RSR contract - Mainnet Forking', function () {
     })
 
     // *************** Phase 2 *******************
-    describe('Then pausing OldRSR (Deployment Phase 2)', () => {
+    describe('Then pausing OldRSR (Deployment Phase 2)', async () => {
       before(async () => {
-        await deployForkSpell()
-        await oldRSR.connect(pauser).addPauser(forkSpell.address)
+        await setForkSpell()
       })
 
       it('the deployed fork spell should point to the expected RSR address', async () => {
-        expect(await forkSpell.rsrAddr()).to.eq(rsr.address)
+        expect((await forkSpell.rsrAddr()).toLowerCase()).to.eq(rsr.address)
       })
 
       it('the fork spell should be a Pauser of OldRSR', async () => {
         expect(await oldRSR.isPauser(forkSpell.address))
+        expect(await oldRSR.isPauser(companySafe._address))
       })
 
       it('OldRSR should not be paused', async () => {
@@ -169,11 +166,11 @@ describe('RSR contract - Mainnet Forking', function () {
       describe('Then deploying and casting the SiphonSpell (Deployment Phase 3)', async () => {
         before(async () => {
           // deploy + cast siphonspell
-          await deploySiphon()
+          await setSiphonSpell()
           await rsr.connect(companySafe).castSpell(siphonSpell.address)
         })
 
-        it('the siphon spell should have been executed', async () => {
+        it.only('the siphon spell should have been executed', async () => {
           expect(await siphonSpell.hasBeenCast()).to.eq(true)
         })
 
@@ -184,37 +181,44 @@ describe('RSR contract - Mainnet Forking', function () {
         })
 
         it('rsr weights should be configured', async () => {
-          for (const siphon of mockSiphons) {
+          for (const siphon of realSiphons) {
             expect(await rsr.hasWeights(siphon.from)).to.eq(true)
             expect(await rsr.weights(siphon.from, siphon.to)).to.eq(siphon.weight)
           }
         })
 
-        it('a newly deployed siphon spell can be called to change weights', async () => {
-          // This siphon send all the balance from the first mockSiphon address to a hardhat mock address
-          await deploySiphon([{ from: mockSiphons[0].from, to: addr1.address, weight: WEIGHT_ONE }])
+        // it('a newly deployed siphon spell can be called to change weights', async () => {
+        //   // This siphon send all the balance from the first mockSiphon address to a hardhat mock address
+        //   // await setSiphonSpell([
+        //   //   { from: realSiphons[0].from, to: addr1.address, weight: WEIGHT_ONE },
+        //   // ])
 
-          await expect(rsr.connect(companySafe).castSpell(siphonSpell.address))
-            .to.emit(rsr, 'MageChanged')
-            .withArgs(ZERO_ADDRESS, siphonSpell.address)
-            .and.to.emit(rsr, 'MageChanged')
-            .withArgs(siphonSpell.address, ZERO_ADDRESS)
-            .and.to.emit(rsr, 'SpellCast')
-            .withArgs(siphonSpell.address)
-        })
+        //   await expect(rsr.connect(companySafe).castSpell(siphonSpell.address))
+        //     .to.emit(rsr, 'MageChanged')
+        //     .withArgs(ZERO_ADDRESS, siphonSpell.address)
+        //     .and.to.emit(rsr, 'MageChanged')
+        //     .withArgs(siphonSpell.address, ZERO_ADDRESS)
+        //     .and.to.emit(rsr, 'SpellCast')
+        //     .withArgs(siphonSpell.address)
+        // })
 
-        it('balance of newly affected addresses by the siphon should be updated', async () => {
-          expect(await rsr.weights(mockSiphons[0].from, addr1.address)).to.eq(WEIGHT_ONE)
-          // Balance of the first address of the first siphons
-          expect(await rsr.balanceOf(addr1.address)).to.eq(
-            await oldRSR.balanceOf(mockSiphons[0].from)
-          )
-        })
+        // it('balance of newly affected addresses by the siphon should be updated', async () => {
+        //   expect(await rsr.weights(realSiphons[0].from, addr1.address)).to.eq(WEIGHT_ONE)
+        //   // Balance of the first address of the first siphons
+        //   expect(await rsr.balanceOf(addr1.address)).to.eq(
+        //     await oldRSR.balanceOf(realSiphons[0].from)
+        //   )
+        // })
 
         it('rsr balances of addresses with weights should not be crossed', async () => {
-          for (const siphon of mockSiphons) {
+          for (const siphon of realSiphons) {
             expect(await rsr.balCrossed(siphon.from)).to.eq(false)
           }
+        })
+
+        it('rsr balance is what is expected for slow wallet', async () => {
+          const slowBal = bn('49448001323102000000000000000')
+          expect(await rsr.balanceOf(SLOW_WALLET_ADDRESS)).to.eq(slowBal)
         })
 
         // *************** Phase 4 *******************
@@ -226,7 +230,7 @@ describe('RSR contract - Mainnet Forking', function () {
             // Already deployed spell
             await expect(rsr.connect(companySafe).castSpell(forkSpell.address)).to.be.reverted
             // Newly deployed spell
-            await deployForkSpell()
+            await setForkSpell()
             await expect(rsr.connect(companySafe).castSpell(forkSpell.address)).to.be.reverted
           })
           it('OldRSR should be paused', async () => {
@@ -240,12 +244,12 @@ describe('RSR contract - Mainnet Forking', function () {
             expect(await rsr.mage()).to.eq(ZERO_ADDRESS)
           })
           it('rsr.pauser should be CompanySafe', async () => {
-            expect(await rsr.pauser()).to.eq(companySafe.address)
+            expect(await rsr.pauser()).to.eq(companySafe._address)
           })
           it('rsr.pauser should be able to be renounced', async () => {
             await expect(rsr.connect(companySafe).renouncePauser())
               .to.emit(rsr, 'PauserChanged')
-              .withArgs(companySafe.address, ZERO_ADDRESS)
+              .withArgs(companySafe._address, ZERO_ADDRESS)
             expect(await rsr.pauser()).to.equal(ZERO_ADDRESS)
             await expect(rsr.connect(companySafe).pause()).to.be.revertedWith(
               'only pauser, mage, or owner'
@@ -256,33 +260,33 @@ describe('RSR contract - Mainnet Forking', function () {
               rsr.connect(companySafe).siphon(ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, WEIGHT_ONE)
             ).to.be.revertedWith('owner')
           })
-          it('balances should be updated according to previously spelled siphons', async () => {
-            for (const siphon of mockSiphons.slice(1)) {
-              const currentBal = await rsr.balanceOf(siphon.from)
-              const oldBal = await oldRSR.balanceOf(siphon.from)
+          // it('balances should be updated according to previously spelled siphons', async () => {
+          //   for (const siphon of realSiphons.slice(1)) {
+          //     const currentBal = await rsr.balanceOf(siphon.from)
+          //     const oldBal = await oldRSR.balanceOf(siphon.from)
 
-              // weight 0, balance unchanged
-              if (siphon.weight.eq(bn(0))) {
-                expect(currentBal).to.eq(oldBal)
-              } else {
-                expect(currentBal).to.not.eq(oldBal)
+          //     // weight 0, balance unchanged
+          //     if (siphon.weight.eq(bn(0))) {
+          //       expect(currentBal).to.eq(oldBal)
+          //     } else {
+          //       expect(currentBal).to.not.eq(oldBal)
 
-                // if the siphon weight is one, new balance should be 0
-                if (siphon.weight === WEIGHT_ONE) {
-                  expect(currentBal).to.eq(ZERO)
-                } else {
-                  const substracted = oldBal.mul(siphon.weight).div(WEIGHT_ONE)
-                  // If the weight is a fraction, the new balance should match that fraction calculation
-                  expect(currentBal).to.eq(oldBal.sub(substracted))
-                }
-              }
-            }
-            // Second runned siphon
-            expect(await rsr.balanceOf(mockSiphons[0].from)).to.eq(bn(0))
-            expect(await rsr.balanceOf(addr1.address)).to.eq(
-              await oldRSR.balanceOf(mockSiphons[0].from)
-            )
-          })
+          //       // if the siphon weight is one, new balance should be 0
+          //       if (siphon.weight === WEIGHT_ONE) {
+          //         expect(currentBal).to.eq(ZERO)
+          //       } else {
+          //         const substracted = oldBal.mul(siphon.weight).div(WEIGHT_ONE)
+          //         // If the weight is a fraction, the new balance should match that fraction calculation
+          //         expect(currentBal).to.eq(oldBal.sub(substracted))
+          //       }
+          //     }
+          //   }
+          //   // Second runned siphon
+          //   expect(await rsr.balanceOf(realSiphons[0].from)).to.eq(bn(0))
+          //   expect(await rsr.balanceOf(addr1.address)).to.eq(
+          //     await oldRSR.balanceOf(realSiphons[0].from)
+          //   )
+          // })
           it('account with no weight have their balance unchanged', async () => {
             expect(await oldRSR.balanceOf(holder._address)).to.eq(
               await rsr.balanceOf(holder._address)
