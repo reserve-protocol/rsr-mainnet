@@ -17,6 +17,12 @@ RSR
 Fork Spell
 - https://etherscan.io/address/0x53b968caf6a1715caa8fa3f0fb63e8d09a6433e1
 
+Slow Wallet
+- https://etherscan.io/address/0x6bab6eb87aa5a1e4a8310c73bdaaa8a5daad81c1
+
+Siphon Spell
+- https://etherscan.io/address/0x3eb1438b1edff7d899a863d4792e8d8f7d455277
+
 ### Network: Ropsten
 
 RSR
@@ -25,6 +31,9 @@ RSR
 
 Fork Spell
 - https://etherscan.io/address/0x53b968caf6a1715caa8fa3f0fb63e8d09a6433e1
+
+Slow Wallet
+- https://ropsten.etherscan.io/address/0x6bab6EB87Aa5a1e4A8310C73bDAAA8A5dAAd81C1
 
 
 ## Context
