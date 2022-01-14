@@ -71,7 +71,7 @@ print(f"New addresses with increased balances: {len(siphon_dests)}")
 
 # tests against a small number of addresses
 # easy to remove this if you have really high-throughput access Ethereum node
-normal_holders = [random.choice(normal_holders) for _ in range(50)]
+normal_holders = [random.choice(normal_holders) for _ in range(30)]
 
 # Invent a few random zero addresses for good measure
 zero_addrs = [generate_random_addr() for _ in range(5)]
@@ -104,10 +104,12 @@ for (addr, bal) in siphon_results.items():
     )
 print("")
 
-print("Computing change in sum of balances. plz wait kthx...")
-old_balance = sum(balance(OLD_RSR, addr) for addr in siphon_srcs)
-old_balance += balance(OLD_RSR, "0xA7b123D54BcEc14b4206dAb796982a6d5aaA6770")
-print(f"Old balance from siphoned addresses: {old_balance}")
-new_balance = sum(balance(NEW_RSR, addr) for addr in siphon_dests)
-print(f"New balance in siphoned addresses: {new_balance}")
-print(f"Difference: {old_balance - new_balance}")
+# Check that total supply remains the same
+# This is nice to run once, but extremely slow.
+# print("Computing change in sum of balances. plz wait kthx...")
+# old_balance = sum(balance(OLD_RSR, addr) for addr in siphon_srcs)
+# old_balance += balance(OLD_RSR, "0xA7b123D54BcEc14b4206dAb796982a6d5aaA6770")
+# print(f"Old balance from siphoned addresses: {old_balance}")
+# new_balance = sum(balance(NEW_RSR, addr) for addr in siphon_dests)
+# print(f"New balance in siphoned addresses: {new_balance}")
+# print(f"Difference: {old_balance - new_balance}")
