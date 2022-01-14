@@ -37,7 +37,6 @@ def generate_random_addr():
 
 
 ##### Grab data
-
 # Read list of all addresses from Etherscan CSV export
 all_holders = []
 with open("oldrsr-holders.csv", newline="") as csv_file:
@@ -68,38 +67,47 @@ print(f"Addresses with unchanged balances: {len(normal_holders)}")
 print(f"Old addresses with reduced balances: {len(siphon_srcs)}")
 print(f"New addresses with increased balances: {len(siphon_dests)}")
 
+##### Generate a little more data
+
 # tests against a small number of addresses
 # easy to remove this if you have really high-throughput access Ethereum node
-random_indexes = [
-
-normal_holders = normal_holders[:0]
+normal_holders = [random.choice(normal_holders) for _ in range(50)]
 
 # Invent a few random zero addresses for good measure
 zero_addrs = [generate_random_addr() for _ in range(5)]
 
-# print("Checking equality of normal holder balances", end="", flush=True)
+# print("Checking equality of some random holder balances", end="", flush=True)
 # for addr in normal_holders:
 #     print(".", end="", flush=True)
 #     assert balance(OLD_RSR, addr) == balance(NEW_RSR, addr)
-
 # print("")
 
 # print("Checking some zero balances, for good measure", end="", flush=True)
 # for addr in zero_addrs:
 #     print(".", end="", flush=True)
 #     assert balance(NEW_RSR, addr) == 0
-
 # print("")
 
-print("Checking expected resulting balances on siphoned addresses")
-for (addr, bal) in siphon_results.items():
-    # print(".", end="", flush=True)
-    print(addr)
-    assert (
-        int(bal * 1e3 - 1) * int(1e15)
-        < balance(NEW_RSR, addr)
-        < int(bal * 1e3 + 1) * int(1e15)
-    )
-    
-    
+print("Checking zeroing of siphon sources", end="", flush=True)
+for addr in siphon_srcs:
+    print(".", end="", flush=True)
+    assert balance(NEW_RSR, addr) == 0
 print("")
+
+# print("Checking expected resulting balances on siphoned addresses")
+# for (addr, bal) in siphon_results.items():
+#     print(".", end="", flush=True)
+#     assert (
+#         int(bal * 1e3 - 1) * int(1e15)
+#         < balance(NEW_RSR, addr)
+#         < int(bal * 1e3 + 1) * int(1e15)
+#     )
+# print("")
+
+print("Computing change in sum of balances. plz wait kthx...")
+old_balance = sum(balance(OLD_RSR, addr) for addr in siphon_srcs)
+old_balance += balance(OLD_RSR, "0xA7b123D54BcEc14b4206dAb796982a6d5aaA6770")
+print(f"Old balance from siphoned addresses: {old_balance}")
+new_balance = sum(balance(NEW_RSR, addr) for addr in siphon_dests)
+print(f"New balance in siphoned addresses: {new_balance}")
+print(f"Difference: {old_balance - new_balance}")
