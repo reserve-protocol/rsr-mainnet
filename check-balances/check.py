@@ -76,17 +76,17 @@ normal_holders = [random.choice(normal_holders) for _ in range(50)]
 # Invent a few random zero addresses for good measure
 zero_addrs = [generate_random_addr() for _ in range(5)]
 
-# print("Checking equality of some random holder balances", end="", flush=True)
-# for addr in normal_holders:
-#     print(".", end="", flush=True)
-#     assert balance(OLD_RSR, addr) == balance(NEW_RSR, addr)
-# print("")
+print("Checking equality of some random holder balances", end="", flush=True)
+for addr in normal_holders:
+    print(".", end="", flush=True)
+    assert balance(OLD_RSR, addr) == balance(NEW_RSR, addr)
+print("")
 
-# print("Checking some zero balances, for good measure", end="", flush=True)
-# for addr in zero_addrs:
-#     print(".", end="", flush=True)
-#     assert balance(NEW_RSR, addr) == 0
-# print("")
+print("Checking some zero balances, for good measure", end="", flush=True)
+for addr in zero_addrs:
+    print(".", end="", flush=True)
+    assert balance(NEW_RSR, addr) == 0
+print("")
 
 print("Checking zeroing of siphon sources", end="", flush=True)
 for addr in siphon_srcs:
@@ -94,15 +94,15 @@ for addr in siphon_srcs:
     assert balance(NEW_RSR, addr) == 0
 print("")
 
-# print("Checking expected resulting balances on siphoned addresses")
-# for (addr, bal) in siphon_results.items():
-#     print(".", end="", flush=True)
-#     assert (
-#         int(bal * 1e3 - 1) * int(1e15)
-#         < balance(NEW_RSR, addr)
-#         < int(bal * 1e3 + 1) * int(1e15)
-#     )
-# print("")
+print("Checking expected resulting balances on siphoned addresses")
+for (addr, bal) in siphon_results.items():
+    print(".", end="", flush=True)
+    assert (
+        int(bal * 1e3 - 1) * int(1e15)
+        < balance(NEW_RSR, addr)
+        < int(bal * 1e3 + 1) * int(1e15)
+    )
+print("")
 
 print("Computing change in sum of balances. plz wait kthx...")
 old_balance = sum(balance(OLD_RSR, addr) for addr in siphon_srcs)
