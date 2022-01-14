@@ -10,7 +10,7 @@ import { RSR } from '../../typechain/RSR'
 import { SiphonSpell } from '../../typechain/SiphonSpell'
 import { WEIGHT_ONE, ZERO_ADDRESS } from '../common'
 import { UPGRADE_SIPHONS } from './../../scripts/deployment/siphon_config'
-import { impersonate, fund } from './utils/accounts'
+import { fund, impersonate } from './utils/accounts'
 import siphons from './utils/siphons'
 
 // Note: More siphon tests cases can be added when the contract is deployed
@@ -75,7 +75,7 @@ const setup = async () => {
       {
         forking: {
           jsonRpcUrl: process.env.MAINNET_RPC_URL,
-          blockNumber: 13999720,
+          blockNumber: 14000388,
         },
       },
     ],
@@ -216,10 +216,7 @@ describe('RSR contract - Mainnet Forking', function () {
         })
 
         // *************** Phase 4 *******************
-        describe('Then moving to the WORKING phase (The Fork, Deployment Phase 4)', async () => {
-          before(async () => {
-            await rsr.connect(companySafe).castSpell(forkSpell.address)
-          })
+        describe.only('Then moving to the WORKING phase (The Fork, Deployment Phase 4)', async () => {
           it('should only fork once', async () => {
             // Already deployed spell
             await expect(rsr.connect(companySafe).castSpell(forkSpell.address)).to.be.reverted
@@ -255,9 +252,9 @@ describe('RSR contract - Mainnet Forking', function () {
             ).to.be.revertedWith('owner')
           })
 
-          // First 100 addresses
+          // First 30 addresses
           it('not siphoned account balances should be the same on both RSR contracts', async () => {
-            for (const holderAddress of normalHolders.slice(0, 100)) {
+            for (const holderAddress of normalHolders.slice(0, 30)) {
               expect(await rsr.balanceOf(holderAddress)).to.eq(
                 await oldRSR.balanceOf(holderAddress)
               )
