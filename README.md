@@ -15,7 +15,7 @@ Here is an example tx showing the pattern: https://etherscan.io/tx/0xcb68bf9a7bb
 Implications:
 
 - If you are an exchange or wallet that was never integrated with old RSR, then parsing events will work on the new contract the way you're used to. All the accounts in this case will have never held a balance on the old RSR.
-- If you were previously integrated with old RSR and are trying to integrate with new RSR, **you will need to ignore transfer events that involve the zero address**. Otherwise, it is possible your systems could double a user's balance by accidentally crediting them a second time for an amount equal to the balance they already have.
+- If you were previously integrated with old RSR and are trying to integrate with new RSR, **you will need to ignore transfers whose source is the zero address**. Otherwise, it is possible your systems could double a user's balance by accidentally crediting them a second time for an amount equal to the balance they already have.
 
 ## Deployments
 
