@@ -12,6 +12,7 @@ dotenv.config()
 
 const MAINNET_RPC_URL = process.env.MAINNET_RPC_URL || ''
 const ROPSTEN_RPC_URL = process.env.ROPSTEN_RPC_URL || ''
+const RINKEBY_RPC_URL = process.env.RINKEBY_RPC_URL || ''
 const MNEMONIC = process.env.MNEMONIC || ''
 
 const config: HardhatUserConfig = {
@@ -35,6 +36,13 @@ const config: HardhatUserConfig = {
     ropsten: {
       chainId: 3,
       url: ROPSTEN_RPC_URL,
+      accounts: {
+        mnemonic: MNEMONIC,
+      },
+    },
+    rinkeby: {
+      chainId: 4,
+      url: RINKEBY_RPC_URL,
       accounts: {
         mnemonic: MNEMONIC,
       },
