@@ -1714,7 +1714,7 @@ abstract contract ERC20Pausable is ERC20, Pausable {
 /**
  * @title RSR
 
- * An ERC20 insurance token for the Reserve Protocol ecosystem, using the copy-on-write
+ * An ERC20 over-collateralization token for the Reserve Protocol ecosystem, using the copy-on-write
  * pattern to enable a ugprade from the old RSR token.
 
  * This token allows the configuration of a rich system of "siphons" to administer the
